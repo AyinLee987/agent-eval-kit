@@ -23,7 +23,10 @@ BM25-only baseline**, with the entire gain concentrated in paraphrased
 queries that share little vocabulary with their answer — see
 [`benchmarks/rag_recall/RESULTS.md`](benchmarks/rag_recall/RESULTS.md) for
 the full methodology, numbers, and caveats (small n, one embedding model,
-synthetic corpus — read it before citing a number from it).
+synthetic corpus — read it before citing a number from it), or
+[`reports/rag-recall-evaluation.md`](reports/rag-recall-evaluation.md) for
+the full write-up (objective, methodology, complete results tables, threats
+to validity, and the full labeled query set as an appendix).
 
 The multi-agent latency/failure-isolation benchmark against
 `MultiAgentOrchestrator` has not been run yet — that's next. See
@@ -72,6 +75,10 @@ benchmarks/
                           project's hybrid pipeline — corpus.py (synthetic
                           docs), queries.py (labeled cases), run_benchmark.py,
                           RESULTS.md (numbers + methodology + caveats)
+reports/
+  rag-recall-evaluation.md  formal write-up of the RAG benchmark above —
+                            objective, full methodology, complete results,
+                            threats to validity, full query set appendix
 tests/
   test_scoring.py, test_retrieval_metrics.py, test_concurrency_bench.py,
   test_harness.py        cover the toolkit end-to-end via the bare baseline
