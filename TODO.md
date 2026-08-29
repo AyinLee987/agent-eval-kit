@@ -61,19 +61,24 @@ architectural risk (no new core types needed) and the cross-model judge
 setup (Bailian agent / DeepSeek judge) was immediately available.
 
 - [x] **④ Full trajectory evaluation + cross-model LLM-judge.** Done, see above.
-- [ ] **① Conversational ability (single-turn + multi-turn).** Metrics
-      modeled on DeepEval's taxonomy:
-      - single-turn: answer relevancy, task completion/prompt alignment
-      - multi-turn: knowledge retention (does it forget/contradict earlier
-        turns), conversation completeness (did the *conversation* address
-        every user intent, not just the last turn), role adherence
-      - **architecture decision (agreed):** extend `agent_eval` with a
-        first-class multi-turn concept — a `Conversation` type (one agent
-        instance, a sequence of turns, a list of per-turn `AgentOutcome`s)
-        and a `ConversationHarness` alongside the existing single-turn
-        `EvalHarness`, rather than a one-off benchmark script. This is a
-        real core-package addition, not just a new `benchmarks/` folder —
-        do it as its own change, not bundled into a benchmark PR.
+- [x] **① Conversational ability (single-turn + multi-turn).** Done — see
+      `benchmarks/conversational/RESULTS.md` and
+      `reports/conversational-evaluation.md`. Extended `agent_eval` with a
+      first-class multi-turn concept as planned: `types.Turn` /
+      `ConversationOutcome`, `conversation_harness.ConversationHarness`
+      (one agent per conversation, not per turn), `conversation_scoring.
+      ConversationJudgeScorer` (knowledge retention + conversation
+      completeness), and a new single-turn `scoring.AnswerRelevancyScorer`.
+      Discovered `ReActAgent.run()` doesn't persist state across calls by
+      itself — multi-turn state is threaded through the sibling repo's
+      existing `ContextProvider` hook via the new
+      `adapters/conversation_history.py`, no sibling-repo changes needed.
+      7 conversations (Bailian agent / DeepSeek judge): 1.00/1.00 on both
+      conversation-level dimensions, answer_relevancy 0.98 after fixing a
+      **second instance of the same rubric-design bug** found in ④ (a
+      judge implicitly assuming every turn is a question). Role adherence
+      deliberately deferred to ③ (adversarial persona-holding overlaps with
+      safety testing more than with this batch's straightforward scenarios).
 - [ ] **② Robustness (paraphrase/translation → answer similarity).** For a
       set of base queries, generate 3–4 variants each (paraphrase +
       translation to 1–2 other languages), run the agent on every variant,
@@ -87,14 +92,17 @@ setup (Bailian agent / DeepSeek judge) was immediately available.
 - [ ] **③ Safety (public datasets).** Candidates: AdvBench, HarmBench,
       TruthfulQA, Do-Not-Answer (English); SafetyBench or Flames (Chinese —
       more relevant given the sibling project's Chinese RAG focus). Sample
-      100–200 prompts rather than a full dataset. Natural two-part split:
-      direct harmful-request refusal rate, and (reusing the sibling
-      project's `ToolOutputGuard`) resistance to instructions injected via
-      tool output — the second part overlaps with the earlier
-      "prompt-injection guard precision/recall" item below.
-- [ ] **⑤ Business-scenario evaluation.** Not yet scoped — likely a
-      composite of multi-turn (①) and specific tool combinations once ①'s
-      `Conversation`/`ConversationHarness` exists. Revisit after ① lands.
+      100–200 prompts rather than a full dataset. Three-part split: direct
+      harmful-request refusal rate; (reusing the sibling project's
+      `ToolOutputGuard`) resistance to instructions injected via tool
+      output — overlaps with the "prompt-injection guard precision/recall"
+      item below; and **role adherence under adversarial pressure**
+      (deferred here from ①) — give the agent a persona/scope restriction
+      and use `ConversationHarness` (now built) to test whether a multi-turn
+      conversation can talk it out of that persona.
+- [ ] **⑤ Business-scenario evaluation.** Not yet scoped. `Conversation`/
+      `ConversationHarness` now exists (built for ①) — likely a composite
+      of multi-turn scenarios and specific tool combinations on top of it.
 
 ## Toolkit hardening (before calling this a "full version")
 

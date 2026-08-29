@@ -1,0 +1,79 @@
+[
+  {
+    "id": "retention-project-name",
+    "expected_intentions": [
+      "记住用户的自我介绍信息（姓名、负责的项目）",
+      "满足算术请求",
+      "在后续轮次被问到时，能正确回忆起用户提到的项目名称"
+    ],
+    "turns": [
+      {"prompt": "我叫小明，正在负责 incident-response 项目的客户对接。"},
+      {"prompt": "顺便帮我算一下 23 乘 17。", "expect_substrings": ["391"], "expect_tool": "calculator"},
+      {"prompt": "还记得我在负责哪个项目吗？", "expect_substrings": ["incident-response"]}
+    ]
+  },
+  {
+    "id": "retention-update-overwrite",
+    "expected_intentions": [
+      "记住用户更正后的最新项目名称，而不是最早提到的那个"
+    ],
+    "turns": [
+      {"prompt": "我现在负责的项目是 database-backup-schedule。"},
+      {"prompt": "抱歉更正一下，我实际上换到 api-rate-limits 这个项目了。"},
+      {"prompt": "我现在负责哪个项目？", "expect_substrings": ["api-rate-limits"]}
+    ]
+  },
+  {
+    "id": "completeness-three-asks",
+    "expected_intentions": [
+      "回答了加法请求",
+      "回答了 PTO 天数查询请求",
+      "回答了当前时间查询请求"
+    ],
+    "turns": [
+      {"prompt": "帮我算一下 12 加 30。", "expect_substrings": ["42"], "expect_tool": "calculator"},
+      {"prompt": "另外，用 lookup_fact 查一下 key 为 'pto_days_per_year' 的值是多少。", "expect_substrings": ["15"], "expect_tool": "lookup_fact"},
+      {"prompt": "最后，麻烦用 current_datetime 工具查一下现在的时间。", "expect_tool": "current_datetime"}
+    ]
+  },
+  {
+    "id": "multiturn-tool-chain-rate-limit",
+    "expected_intentions": [
+      "查到标准 API 速率限制的具体数值",
+      "基于该数值正确计算 10 分钟窗口内允许的请求数"
+    ],
+    "turns": [
+      {"prompt": "用 lookup_fact 查一下 key 'standard_rate_limit_rpm' 的值。", "expect_substrings": ["60"], "expect_tool": "lookup_fact"},
+      {"prompt": "基于刚才查到的值，告诉我 10 分钟内总共允许多少次请求。", "expect_substrings": ["600"]}
+    ]
+  },
+  {
+    "id": "multiturn-tool-chain-stipend",
+    "expected_intentions": [
+      "查到值班津贴的具体数值",
+      "基于该数值正确计算一个季度 3 次轮值的总金额"
+    ],
+    "turns": [
+      {"prompt": "用 lookup_fact 查一下 key 'oncall_stipend_usd' 的值。", "expect_substrings": ["200"], "expect_tool": "lookup_fact"},
+      {"prompt": "如果一个季度值这样的班 3 次，总共能拿到多少钱？", "expect_substrings": ["600"]}
+    ]
+  },
+  {
+    "id": "control-single-turn",
+    "expected_intentions": ["正确回答加法问题"],
+    "turns": [
+      {"prompt": "13 加 29 等于多少？", "expect_substrings": ["42"], "expect_tool": "calculator"}
+    ]
+  },
+  {
+    "id": "control-small-talk",
+    "expected_intentions": [
+      "礼貌回应问候",
+      "对自我介绍请求给出合理回应，且不编造不存在的能力"
+    ],
+    "turns": [
+      {"prompt": "你好，今天感觉怎么样？"},
+      {"prompt": "能简单介绍一下你自己吗？"}
+    ]
+  }
+]

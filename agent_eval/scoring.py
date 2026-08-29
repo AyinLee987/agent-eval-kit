@@ -90,6 +90,31 @@ class TrajectoryScorer:
         return {"trajectory_score": sum(components) / len(components)}
 
 
+class AnswerRelevancyScorer:
+    """LLM-judge over whether the final answer actually addresses the
+
+    question asked — not whether it's correct, just whether it responds to
+    what was asked. Catches an answer that's substantial-looking but
+    doesn't engage with the actual question (e.g. answering a different,
+    easier question than the one posed). Built from
+    :func:`agent_eval.judge.build_answer_relevancy_judge_fn`. The judge
+    model should differ from the model that produced the answer, for the
+    same self-preference-bias reason as :class:`TrajectoryJudgeScorer`.
+    """
+
+    name = "answer_relevancy"
+
+    def __init__(self, judge_fn: Callable[[Task, AgentOutcome], Dict[str, Any]]) -> None:
+        self.judge_fn = judge_fn
+
+    def score(self, task: Task, outcome: AgentOutcome) -> Dict[str, Any]:
+        result = self.judge_fn(task, outcome)
+        return {
+            "answer_relevancy": result.get("answer_relevancy"),
+            "answer_relevancy_rationale": result.get("rationale"),
+        }
+
+
 class TrajectoryJudgeScorer:
     """LLM-as-judge over the full trajectory, scored across named dimensions
 

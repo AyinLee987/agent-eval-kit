@@ -82,3 +82,44 @@ class AgentOutcome:
         return any(
             (step.observation or "").startswith(marker) for step in self.trajectory
         )
+
+
+@dataclass(frozen=True)
+class Turn:
+    """One exchange in a multi-turn conversation: what the user said, and
+
+    the agent's normalized outcome for that turn.
+    """
+
+    user_message: str
+    outcome: AgentOutcome
+
+
+@dataclass(frozen=True)
+class ConversationOutcome:
+    """A full multi-turn conversation: ordered turns from one continuous
+
+    session with a single agent instance. Unlike a single-turn
+    :class:`AgentOutcome`, later turns may depend on earlier ones — that
+    dependency is the entire point of evaluating a conversation rather than
+    scoring each turn in isolation (see :mod:`agent_eval.conversation_scoring`).
+    """
+
+    turns: List[Turn]
+
+    @property
+    def total_tokens(self) -> int:
+        return sum(turn.outcome.tokens for turn in self.turns)
+
+    @property
+    def total_steps(self) -> int:
+        return sum(turn.outcome.steps for turn in self.turns)
+
+    def transcript(self) -> str:
+        """Render the conversation as alternating "User:"/"Assistant:" lines."""
+
+        lines = []
+        for turn in self.turns:
+            lines.append(f"User: {turn.user_message}")
+            lines.append(f"Assistant: {turn.outcome.answer}")
+        return "\n".join(lines)

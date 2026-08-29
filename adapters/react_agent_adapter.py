@@ -12,9 +12,11 @@ absent; only code paths that use this adapter need it installed, e.g.:
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any, Callable, Tuple
 
 from agent_eval.types import AgentOutcome, TrajectoryStep
+
+from .conversation_history import ConversationHistoryProvider
 
 
 def _import_react_agent():
@@ -47,6 +49,40 @@ def build_agent_factory(
 
     def factory() -> Any:
         return ReActAgent(llm=llm_factory(), tools=tools_factory(), **agent_kwargs)
+
+    return factory
+
+
+def build_agent_and_history_factory(
+    llm_factory: Callable[[], Any],
+    tools_factory: Callable[[], Any],
+    **agent_kwargs: Any,
+) -> Callable[[], Tuple[Any, ConversationHistoryProvider]]:
+    """Return a zero-arg factory building a fresh ``(ReActAgent, history)``
+
+    pair per conversation, for
+    :class:`agent_eval.conversation_harness.ConversationHarness`.
+
+    A fresh :class:`ConversationHistoryProvider` is created and wired into
+    the agent's ``context_providers`` on every call, so conversations never
+    share history — mirrors :func:`build_agent_factory`'s per-task
+    isolation, one level up (per-conversation instead of per-task). Any
+    ``context_providers`` passed in ``agent_kwargs`` run before the history
+    provider, in the order given.
+    """
+
+    ReActAgent = _import_react_agent()
+    existing_providers = list(agent_kwargs.pop("context_providers", None) or [])
+
+    def factory() -> Tuple[Any, ConversationHistoryProvider]:
+        history = ConversationHistoryProvider()
+        agent = ReActAgent(
+            llm=llm_factory(),
+            tools=tools_factory(),
+            context_providers=[*existing_providers, history],
+            **agent_kwargs,
+        )
+        return agent, history
 
     return factory
 

@@ -2,8 +2,14 @@ import json
 
 import pytest
 
-from agent_eval.judge import build_judge_prompt, build_llm_judge_fn, render_trajectory
-from agent_eval.scoring import TrajectoryJudgeScorer
+from agent_eval.judge import (
+    build_answer_relevancy_judge_fn,
+    build_answer_relevancy_prompt,
+    build_judge_prompt,
+    build_llm_judge_fn,
+    render_trajectory,
+)
+from agent_eval.scoring import AnswerRelevancyScorer, TrajectoryJudgeScorer
 from agent_eval.types import AgentOutcome, ToolCall, TrajectoryStep
 
 
@@ -69,6 +75,26 @@ def test_build_llm_judge_fn_raises_on_a_reply_with_no_json():
 
     with pytest.raises(ValueError):
         judge_fn({"prompt": "x"}, _outcome())
+
+
+def test_build_answer_relevancy_prompt_includes_question_and_answer():
+    messages = build_answer_relevancy_prompt("What is 23 times 17?", _outcome())
+    content = messages[-1]["content"]
+    assert "What is 23 times 17?" in content
+    assert "391" in content
+
+
+def test_answer_relevancy_scorer_reports_score_and_rationale():
+    fake_reply = json.dumps({"answer_relevancy": 0.9, "rationale": "Directly answers the question."})
+    judge_fn = build_answer_relevancy_judge_fn(lambda messages: fake_reply)
+    scorer = AnswerRelevancyScorer(judge_fn)
+
+    scores = scorer.score({"prompt": "What is 23 times 17?"}, _outcome())
+
+    assert scores == {
+        "answer_relevancy": 0.9,
+        "answer_relevancy_rationale": "Directly answers the question.",
+    }
 
 
 def test_trajectory_judge_scorer_namespaces_dimension_keys_and_keeps_rationale():

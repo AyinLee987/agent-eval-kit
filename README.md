@@ -36,11 +36,22 @@ process caught (and fixed) a real rubric bug where the judge scored
 "correctly used no tool" as a failure. See
 [`reports/agent-trajectory-evaluation.md`](reports/agent-trajectory-evaluation.md).
 
+Multi-turn conversational ability has also been run for real: `agent_eval`
+now has a first-class `Conversation`/`ConversationHarness` (agent state is
+threaded across turns via the sibling repo's existing `ContextProvider`
+hook — no changes to that repo). 7 conversations covering knowledge
+retention (including a mid-conversation correction), cross-turn request
+completeness, and multi-turn tool chaining scored a clean 1.00/1.00 on both
+conversation-level dimensions; turn-level answer relevancy improved
+0.83→0.98 after fixing a second instance of the same rubric-design mistake
+found in the trajectory benchmark (a judge implicitly assuming every turn
+is a question). See
+[`reports/conversational-evaluation.md`](reports/conversational-evaluation.md).
+
 The multi-agent latency/failure-isolation benchmark against
 `MultiAgentOrchestrator`, and the remaining categories in the broader
-agent-evaluation plan (conversational ability, robustness, safety), have
-not been run yet — that's next. See [`TODO.md`](TODO.md) for the full
-roadmap.
+agent-evaluation plan (robustness, safety, business-scenario), have not
+been run yet — that's next. See [`TODO.md`](TODO.md) for the full roadmap.
 
 ## Why this exists
 
@@ -68,20 +79,29 @@ piece of infrastructure:
 
 ```
 agent_eval/
-  types.py              AgentOutcome, TrajectoryStep, ToolCall — the only contract
-  scoring.py            RuleScorer, ToolUsageScorer, TrajectoryScorer, LLMJudgeScorer,
-                         TrajectoryJudgeScorer
-  judge.py              framework-agnostic LLM-as-judge over a full trajectory —
-                         render_trajectory, build_judge_prompt, build_llm_judge_fn
-  harness.py            EvalHarness (runs tasks) + Scorecard (aggregates + renders)
-  retrieval_metrics.py  recall_at_k, mrr, ndcg_at_k, evaluate_retrieval
-  concurrency_bench.py  serial-vs-parallel speedup + failure isolation
-  cli.py / __main__.py  `python -m agent_eval run ...`
+  types.py                 AgentOutcome/TrajectoryStep/ToolCall (single-turn) +
+                           Turn/ConversationOutcome (multi-turn) contracts
+  scoring.py               RuleScorer, ToolUsageScorer, TrajectoryScorer,
+                           AnswerRelevancyScorer, LLMJudgeScorer, TrajectoryJudgeScorer
+  conversation_scoring.py  ConversationScorer protocol + ConversationJudgeScorer
+  judge.py                 framework-agnostic LLM-as-judge — trajectory, answer
+                           relevancy, and conversation-level prompt builders,
+                           all via an injected chat_fn
+  harness.py               EvalHarness (runs single-turn tasks) + Scorecard
+  conversation_harness.py  ConversationHarness (runs multi-turn conversations,
+                           one agent per conversation) + ConversationScorecard
+  retrieval_metrics.py     recall_at_k, mrr, ndcg_at_k, evaluate_retrieval
+  concurrency_bench.py     serial-vs-parallel speedup + failure isolation
+  cli.py / __main__.py     `python -m agent_eval run ...`
 adapters/
-  bare_baseline.py       self-contained single-pass agent — zero dependencies,
-                          used by this repo's own tests and as a weak baseline
-  react_agent_adapter.py adapts agent-harness-from-scratch's ReActAgent
-                          (imported lazily; only needed if you use this adapter)
+  bare_baseline.py           self-contained single-pass agent — zero dependencies,
+                              used by this repo's own tests and as a weak baseline
+  react_agent_adapter.py     adapts agent-harness-from-scratch's ReActAgent,
+                              single-turn and (build_agent_and_history_factory)
+                              multi-turn (imported lazily)
+  conversation_history.py    ContextProvider implementation that threads
+                              conversation state through a per-call-stateless
+                              agent — no sibling-repo changes needed
 benchmarks/
   tasks.json              sample task set used by the bare-baseline tests
   rag_recall/             RAG Recall@K/MRR/nDCG ablation against the sibling
@@ -91,11 +111,17 @@ benchmarks/
   agent_trajectory/       real ReActAgent (Bailian) graded by an independent
                           DeepSeek judge across 4 trajectory dimensions —
                           tools.py, tasks.json, run_benchmark.py, RESULTS.md
+  conversational/         multi-turn conversations (retention, cross-turn
+                          completeness, tool chaining) graded the same way —
+                          tools.py, conversations.json, run_benchmark.py, RESULTS.md
 reports/
-  rag-recall-evaluation.md       formal write-up of the RAG benchmark above
-  agent-trajectory-evaluation.md formal write-up of the trajectory-judge
-                                  benchmark, including a rubric bug found
-                                  and fixed mid-evaluation
+  rag-recall-evaluation.md        formal write-up of the RAG benchmark above
+  agent-trajectory-evaluation.md  formal write-up of the trajectory-judge
+                                   benchmark, including a rubric bug found
+                                   and fixed mid-evaluation
+  conversational-evaluation.md    formal write-up of the multi-turn benchmark,
+                                   including a second instance of that same
+                                   class of rubric bug
 tests/
   test_scoring.py, test_retrieval_metrics.py, test_concurrency_bench.py,
   test_harness.py        cover the toolkit end-to-end via the bare baseline
