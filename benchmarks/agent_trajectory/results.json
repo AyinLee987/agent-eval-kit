@@ -1,0 +1,150 @@
+{
+  "aggregate": {
+    "rule_pass": 1.0,
+    "used_expected_tool": 1.0,
+    "trajectory_score": 1.0,
+    "judge_tool_selection": 1.0,
+    "judge_tool_execution": 1.0,
+    "judge_process_control": 1.0,
+    "judge_output_quality": 0.9375
+  },
+  "judge_rule_agreement": null,
+  "results": [
+    {
+      "task_id": "basic-multiply",
+      "answer": "23 times 17 is 391.",
+      "stop_reason": "finished",
+      "steps": 2,
+      "tokens": 805,
+      "scores": {
+        "rule_pass": true,
+        "used_expected_tool": true,
+        "trajectory_score": 1.0,
+        "judge_tool_selection": 1.0,
+        "judge_tool_execution": 1.0,
+        "judge_process_control": 1.0,
+        "judge_output_quality": 1.0,
+        "judge_rationale": "The agent correctly used a calculator for the arithmetic task, the tool call was well-formed and returned the correct result, the process was concise and coherent, and the final answer was accurate and grounded in the observation."
+      }
+    },
+    {
+      "task_id": "stipend-total",
+      "answer": "The on-call stipend is $200 per week. For 3 weeks, the total is:\n\n$200 × 3 = $600.\n\nSo, the total for 3 weeks in a quarter is **$600**.",
+      "stop_reason": "finished",
+      "steps": 2,
+      "tokens": 919,
+      "scores": {
+        "rule_pass": true,
+        "used_expected_tool": null,
+        "trajectory_score": 1.0,
+        "judge_tool_selection": 1.0,
+        "judge_tool_execution": 1.0,
+        "judge_process_control": 1.0,
+        "judge_output_quality": 1.0,
+        "judge_rationale": "The agent correctly used the required lookup_fact tool with the exact key, received the stipend value, and computed the total accurately without any unnecessary steps or contradictions."
+      }
+    },
+    {
+      "task_id": "sev1-doubled",
+      "answer": "The SEV1 acknowledgment time is 15 minutes. Double that number is 30.",
+      "stop_reason": "finished",
+      "steps": 2,
+      "tokens": 864,
+      "scores": {
+        "rule_pass": true,
+        "used_expected_tool": null,
+        "trajectory_score": 1.0,
+        "judge_tool_selection": 1.0,
+        "judge_tool_execution": 1.0,
+        "judge_process_control": 1.0,
+        "judge_output_quality": 1.0,
+        "judge_rationale": "The agent correctly used the lookup_fact tool with the exact key required, received the value 15, and accurately doubled it to 30 in the final answer, with no unnecessary steps or contradictions."
+      }
+    },
+    {
+      "task_id": "capital-distractor",
+      "answer": "The capital of France is Paris.",
+      "stop_reason": "finished",
+      "steps": 1,
+      "tokens": 367,
+      "scores": {
+        "rule_pass": true,
+        "used_expected_tool": null,
+        "trajectory_score": 1.0,
+        "judge_tool_selection": 1.0,
+        "judge_tool_execution": 1.0,
+        "judge_process_control": 1.0,
+        "judge_output_quality": 1.0,
+        "judge_rationale": "The task required no tool, and the agent correctly answered directly without unnecessary tool calls. The final answer is correct and complete."
+      }
+    },
+    {
+      "task_id": "divide-by-zero",
+      "answer": "Division by zero is undefined in mathematics. It is not possible to compute 10 divided by 0.",
+      "stop_reason": "finished",
+      "steps": 1,
+      "tokens": 385,
+      "scores": {
+        "rule_pass": true,
+        "used_expected_tool": null,
+        "trajectory_score": 1.0,
+        "judge_tool_selection": 1.0,
+        "judge_tool_execution": 1.0,
+        "judge_process_control": 1.0,
+        "judge_output_quality": 1.0,
+        "judge_rationale": "The task required no tool, and the agent correctly answered directly without unnecessary tool calls. The reasoning was coherent and the final answer is mathematically correct and complete."
+      }
+    },
+    {
+      "task_id": "rate-limit-window",
+      "answer": "The standard API rate limit allows **600 requests** over a 10-minute window.",
+      "stop_reason": "finished",
+      "steps": 3,
+      "tokens": 1455,
+      "scores": {
+        "rule_pass": true,
+        "used_expected_tool": null,
+        "trajectory_score": 1.0,
+        "judge_tool_selection": 1.0,
+        "judge_tool_execution": 1.0,
+        "judge_process_control": 1.0,
+        "judge_output_quality": 1.0,
+        "judge_rationale": "The agent correctly used lookup_fact to retrieve the rate limit and calculator to compute the 10-minute total, with well-formed arguments and coherent reasoning. The final answer of 600 requests is correct and directly grounded in the observed value of 60 RPM."
+      }
+    },
+    {
+      "task_id": "mixed-answerable",
+      "answer": "2 plus 2 is 4.\n\nI don’t have access to weather information — my tools don’t include a weather service. You might want to check a weather website or app for today’s forecast.",
+      "stop_reason": "finished",
+      "steps": 1,
+      "tokens": 412,
+      "scores": {
+        "rule_pass": true,
+        "used_expected_tool": null,
+        "trajectory_score": 1.0,
+        "judge_tool_selection": 1.0,
+        "judge_tool_execution": 1.0,
+        "judge_process_control": 1.0,
+        "judge_output_quality": 0.5,
+        "judge_rationale": "The agent correctly answered the arithmetic without needing a tool and appropriately declined to fabricate weather data since no weather tool was available, but the final answer is incomplete because it did not attempt to use any available tool (e.g., a web search) to actually retrieve the weather, leaving half the task unaddressed."
+      }
+    },
+    {
+      "task_id": "weekday-from-datetime",
+      "answer": "The current date and time is August 29, 2026, at 14:46:43 UTC. That day is a **Saturday**.",
+      "stop_reason": "finished",
+      "steps": 2,
+      "tokens": 861,
+      "scores": {
+        "rule_pass": true,
+        "used_expected_tool": null,
+        "trajectory_score": 1.0,
+        "judge_tool_selection": 1.0,
+        "judge_tool_execution": 1.0,
+        "judge_process_control": 1.0,
+        "judge_output_quality": 1.0,
+        "judge_rationale": "The agent correctly used the current_datetime tool to obtain the current date and time, executed it properly, and provided an accurate final answer (August 29, 2026 is indeed a Saturday) grounded in the observation."
+      }
+    }
+  ]
+}

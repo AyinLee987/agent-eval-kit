@@ -13,7 +13,9 @@ from .scoring import (
     TrajectoryScorer,
     ToolUsageScorer,
     LLMJudgeScorer,
+    TrajectoryJudgeScorer,
 )
+from .judge import build_judge_prompt, build_llm_judge_fn, render_trajectory
 from .harness import EvalHarness, Scorecard, TaskResult
 from .retrieval_metrics import (
     RetrievalCase,
@@ -34,6 +36,10 @@ __all__ = [
     "TrajectoryScorer",
     "ToolUsageScorer",
     "LLMJudgeScorer",
+    "TrajectoryJudgeScorer",
+    "build_judge_prompt",
+    "build_llm_judge_fn",
+    "render_trajectory",
     "EvalHarness",
     "Scorecard",
     "TaskResult",

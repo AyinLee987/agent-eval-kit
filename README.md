@@ -28,9 +28,19 @@ synthetic corpus — read it before citing a number from it), or
 the full write-up (objective, methodology, complete results tables, threats
 to validity, and the full labeled query set as an appendix).
 
+Trajectory-level evaluation with a cross-model LLM judge has also been run
+for real: a Bailian `qwen-plus` agent judged by an independent DeepSeek
+model across four dimensions (tool selection, tool execution, process
+control, output quality) — averaged 0.94–1.00 across 8 tasks, and the
+process caught (and fixed) a real rubric bug where the judge scored
+"correctly used no tool" as a failure. See
+[`reports/agent-trajectory-evaluation.md`](reports/agent-trajectory-evaluation.md).
+
 The multi-agent latency/failure-isolation benchmark against
-`MultiAgentOrchestrator` has not been run yet — that's next. See
-[`TODO.md`](TODO.md) for the full roadmap.
+`MultiAgentOrchestrator`, and the remaining categories in the broader
+agent-evaluation plan (conversational ability, robustness, safety), have
+not been run yet — that's next. See [`TODO.md`](TODO.md) for the full
+roadmap.
 
 ## Why this exists
 
@@ -59,7 +69,10 @@ piece of infrastructure:
 ```
 agent_eval/
   types.py              AgentOutcome, TrajectoryStep, ToolCall — the only contract
-  scoring.py            RuleScorer, ToolUsageScorer, TrajectoryScorer, LLMJudgeScorer
+  scoring.py            RuleScorer, ToolUsageScorer, TrajectoryScorer, LLMJudgeScorer,
+                         TrajectoryJudgeScorer
+  judge.py              framework-agnostic LLM-as-judge over a full trajectory —
+                         render_trajectory, build_judge_prompt, build_llm_judge_fn
   harness.py            EvalHarness (runs tasks) + Scorecard (aggregates + renders)
   retrieval_metrics.py  recall_at_k, mrr, ndcg_at_k, evaluate_retrieval
   concurrency_bench.py  serial-vs-parallel speedup + failure isolation
@@ -75,10 +88,14 @@ benchmarks/
                           project's hybrid pipeline — corpus.py (synthetic
                           docs), queries.py (labeled cases), run_benchmark.py,
                           RESULTS.md (numbers + methodology + caveats)
+  agent_trajectory/       real ReActAgent (Bailian) graded by an independent
+                          DeepSeek judge across 4 trajectory dimensions —
+                          tools.py, tasks.json, run_benchmark.py, RESULTS.md
 reports/
-  rag-recall-evaluation.md  formal write-up of the RAG benchmark above —
-                            objective, full methodology, complete results,
-                            threats to validity, full query set appendix
+  rag-recall-evaluation.md       formal write-up of the RAG benchmark above
+  agent-trajectory-evaluation.md formal write-up of the trajectory-judge
+                                  benchmark, including a rubric bug found
+                                  and fixed mid-evaluation
 tests/
   test_scoring.py, test_retrieval_metrics.py, test_concurrency_bench.py,
   test_harness.py        cover the toolkit end-to-end via the bare baseline

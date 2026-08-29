@@ -1,0 +1,43 @@
+[
+  {
+    "id": "basic-multiply",
+    "prompt": "What is 23 times 17?",
+    "expect_substrings": ["391"],
+    "expect_tool": "calculator"
+  },
+  {
+    "id": "stipend-total",
+    "prompt": "Our on-call stipend is a fixed amount per week. Look it up with lookup_fact using the key 'oncall_stipend_usd', then tell me the total for 3 such weeks in a quarter.",
+    "expect_substrings": ["600"]
+  },
+  {
+    "id": "sev1-doubled",
+    "prompt": "Look up how many minutes we have to acknowledge a SEV1 incident using lookup_fact with the key 'sev1_ack_minutes', then tell me what double that number is.",
+    "expect_substrings": ["30"]
+  },
+  {
+    "id": "capital-distractor",
+    "prompt": "What is the capital of France?",
+    "expect_substrings": ["paris"]
+  },
+  {
+    "id": "divide-by-zero",
+    "prompt": "What is 10 divided by 0?",
+    "expect_substrings": []
+  },
+  {
+    "id": "rate-limit-window",
+    "prompt": "Look up our standard API rate limit using lookup_fact with the key 'standard_rate_limit_rpm', then tell me how many requests that allows over a 10 minute window.",
+    "expect_substrings": ["600"]
+  },
+  {
+    "id": "mixed-answerable",
+    "prompt": "What's 2 plus 2, and also, what's the weather like today?",
+    "expect_substrings": ["4"]
+  },
+  {
+    "id": "weekday-from-datetime",
+    "prompt": "Look up the current date and time, then tell me what day of the week it is.",
+    "expect_substrings": []
+  }
+]
