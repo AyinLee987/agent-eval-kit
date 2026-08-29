@@ -7,3 +7,4 @@ __pycache__/
 venv/
 results/*.json
 !results/.gitkeep
+benchmarks/rag_recall/.embedding_cache.json

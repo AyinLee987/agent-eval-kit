@@ -14,10 +14,20 @@ see [Design notes](#design-notes).
 
 **Early / light version.** The core toolkit (types, scorers, harness, retrieval
 metrics, concurrency benchmark, a minimal CLI) is implemented and tested
-against a self-contained baseline agent. It has not yet been pointed at the
-sibling project's hybrid RAG pipeline or multi-agent orchestrator to produce
-real benchmark numbers — that's next. See [`TODO.md`](TODO.md) for the full
-roadmap.
+against a self-contained baseline agent.
+
+The retrieval metrics have also been run for real against the sibling
+project's hybrid RAG pipeline: **hybrid retrieval (BM25 + a real embedding
+model, RRF-fused) improves MRR by +18.2pp and Recall@5 by +12.5pp over a
+BM25-only baseline**, with the entire gain concentrated in paraphrased
+queries that share little vocabulary with their answer — see
+[`benchmarks/rag_recall/RESULTS.md`](benchmarks/rag_recall/RESULTS.md) for
+the full methodology, numbers, and caveats (small n, one embedding model,
+synthetic corpus — read it before citing a number from it).
+
+The multi-agent latency/failure-isolation benchmark against
+`MultiAgentOrchestrator` has not been run yet — that's next. See
+[`TODO.md`](TODO.md) for the full roadmap.
 
 ## Why this exists
 
@@ -57,7 +67,11 @@ adapters/
   react_agent_adapter.py adapts agent-harness-from-scratch's ReActAgent
                           (imported lazily; only needed if you use this adapter)
 benchmarks/
-  tasks.json             sample task set used by the bare-baseline tests
+  tasks.json              sample task set used by the bare-baseline tests
+  rag_recall/             RAG Recall@K/MRR/nDCG ablation against the sibling
+                          project's hybrid pipeline — corpus.py (synthetic
+                          docs), queries.py (labeled cases), run_benchmark.py,
+                          RESULTS.md (numbers + methodology + caveats)
 tests/
   test_scoring.py, test_retrieval_metrics.py, test_concurrency_bench.py,
   test_harness.py        cover the toolkit end-to-end via the bare baseline

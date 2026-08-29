@@ -17,12 +17,15 @@ expanding on for a resume/portfolio writeup.
 
 ## Next: turn the toolkit into actual resume-grade numbers
 
-- [ ] **RAG recall benchmark.** Build a small labeled corpus (synthetic docs +
-      ~30-50 queries with known relevant chunk ids). Run `evaluate_retrieval`
-      against the sibling project's `RAGPipeline` in four configurations —
-      BM25-only, dense-only, hybrid (RRF), hybrid + reranker — and report
-      Recall@5/@10, MRR, nDCG@10 for each. This is the number that answers
-      "how much did hybrid retrieval improve recall."
+- [x] **RAG recall benchmark.** Done — see `benchmarks/rag_recall/RESULTS.md`.
+      12 synthetic documents, 24 labeled queries (lexical + paraphrase),
+      real `qwen3.7-text-embedding` vectors (not the repo's hash fallback),
+      four pipeline configs. Headline: hybrid RRF improves MRR +18.2pp and
+      Recall@5 +12.5pp over BM25-only, concentrated entirely in paraphrased
+      queries; the default `HeuristicReranker` actually *reduces* MRR
+      relative to plain RRF fusion because it re-weights toward lexical
+      overlap. Read the caveats section before citing a number from it —
+      n=24 is small, one embedding model, one run.
 - [ ] **Multi-agent latency benchmark.** Drive
       `MultiAgentOrchestrator.spawn_subagent` + `wait_subagents` against N
       independent worker tasks and compare wall-clock time to a sequential
