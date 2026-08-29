@@ -1,0 +1,25 @@
+[
+  {
+    "id": "add",
+    "prompt": "calculate: 12 + 30",
+    "expect_substrings": ["42"],
+    "expect_tool": "calculator"
+  },
+  {
+    "id": "multiply",
+    "prompt": "calculate: 6 * 7",
+    "expect_substrings": ["42"],
+    "expect_tool": "calculator"
+  },
+  {
+    "id": "divide",
+    "prompt": "calculate: 84 / 2",
+    "expect_substrings": ["42"],
+    "expect_tool": "calculator"
+  },
+  {
+    "id": "echo",
+    "prompt": "hello evaluation harness",
+    "expect_substrings": ["hello evaluation harness"]
+  }
+]
