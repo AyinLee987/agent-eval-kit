@@ -73,14 +73,14 @@ this became the project's ⑤ ("business scenario") category: a real agent
 with one tool (RAG-as-a-tool) over a knowledge base adapted from real,
 cited MedlinePlus (NIH) pages, following an explicit policy of escalating
 red-flag symptoms instead of diagnosing them and only ever giving a hedged,
-cited judgment otherwise. 5 of 6 conversations scored a clean 1.0/1.0/1.0,
-including correctly revising an assessment mid-conversation once a
-correction turned a low-risk symptom into a red flag. The 6th caught the
-agent fabricating a diagnosis **and falsely claiming it came from
-retrieval** for a question outside the knowledge base — verified by
-directly re-querying the pipeline — and a follow-up stricter instruction
-fixed the false claim but not the underlying use of outside knowledge, a
-gap documented rather than quietly patched. See
+cited judgment otherwise. It originally caught the agent fabricating a
+diagnosis **and falsely claiming it came from retrieval** for a question
+outside the knowledge base — verified by directly re-querying the
+pipeline. Adding an explicit persona to the system prompt afterward fixed
+that case, but the same re-run surfaced a *different* regression — the
+agent skipped its mandatory search step entirely for a meta-question that
+didn't read as a first-person symptom report — reported alongside the fix
+rather than letting the fix look like an unambiguous win. See
 [`reports/medical-qa-evaluation.md`](reports/medical-qa-evaluation.md).
 
 The remaining category in the broader agent-evaluation plan (safety) has

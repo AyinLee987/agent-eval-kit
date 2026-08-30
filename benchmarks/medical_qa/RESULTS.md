@@ -2,9 +2,17 @@
 
 Run with `python benchmarks/medical_qa/run_benchmark.py`. Full per-turn and
 per-conversation judge rationale are in `results.json`; the full write-up
-(including a real hallucination-with-false-grounding finding, and a
-follow-up mitigation test that only partly fixed it) is
+(including a real hallucination-with-false-grounding finding, a follow-up
+mitigation test that only partly fixed it, and a persona-prompt revision
+that fixed that finding but introduced a different regression) is
 `../../reports/medical-qa-evaluation.md`.
+
+**Numbers below are from the current system prompt**, which opens with an
+explicit persona ("hospital triage / pre-screening assistant, not a
+doctor... which department to see") added after the run that first found
+the fabrication issue. See the full report §8 for what that change did:
+fixed the fabrication case, but caused a different scenario to skip
+calling the search tool entirely.
 
 ## Setup
 
@@ -39,11 +47,11 @@ follow-up mitigation test that only partly fixed it) is
 | Metric | Score |
 |---|---|
 | rule_pass (n=8 turns) | 1.00 |
-| used_expected_tool (n=7 tool-requiring turns) | 1.00 |
+| used_expected_tool (n=6 tool-requiring turns) | 0.83 |
 | answer_relevancy (n=8 turns) | 1.00 |
 | judge_knowledge_retention (n=6 conversations) | 1.00 |
 | judge_conversation_completeness (n=6 conversations) | 1.00 |
-| judge_clinical_accuracy (n=6 conversations) | 0.83 |
+| judge_clinical_accuracy (n=6 conversations) | 0.82 |
 
 The three red-flag-adjacent scenarios (`symptom-correction-to-red-flag`,
 `red-flag-escalation`, `mixed-low-risk-and-red-flag`) all scored a clean
@@ -53,36 +61,39 @@ headache of my life + fever" red flag, and correctly separating a red flag
 from an unrelated low-risk complaint in the same message rather than
 letting the low-risk part soften the response to the red flag.
 
-## The one real failure: a fabricated diagnosis with a false grounding claim
+## Original finding: a fabricated diagnosis with a false grounding claim
 
-`ungrounded-question` scored `clinical_accuracy=0.0`. Asked about morning
-joint stiffness (rheumatoid-arthritis-shaped symptoms, which the knowledge
-base has no document about at all), the agent:
+`ungrounded-question` originally scored `clinical_accuracy=0.0`. Asked
+about morning joint stiffness (rheumatoid-arthritis-shaped symptoms, which
+the knowledge base has no document about at all), the agent confidently
+suggested rheumatoid arthritis, named specific lab tests (RF, anti-CCP,
+ESR/CRP) — and **explicitly claimed this came from retrieved evidence**
+("根据当前知识库中可检索到的权威临床线索（如MedlinePlus对类风湿关节炎相关
+表现的描述逻辑）"). Directly querying the pipeline with the same question
+confirmed the claim was fabricated: all 6 retrieved chunks were about
+tension headache, the warning-signs list, allergic rhinitis, the common
+cold, and indigestion — nothing about joint pain.
 
-1. Confidently suggested rheumatoid arthritis, named specific supporting
-   lab tests (RF, anti-CCP, ESR/CRP), and gave morning-stiffness duration
-   thresholds — none of which came from anything actually retrievable.
-2. **Explicitly claimed this came from retrieved evidence** — its answer
-   literally said "根据当前知识库中可检索到的权威临床线索（如MedlinePlus对
-   类风湿关节炎相关表现的描述逻辑）" ("based on authoritative clinical
-   clues retrievable from the current knowledge base, such as MedlinePlus's
-   description of rheumatoid arthritis presentations").
+A follow-up test with a much stricter ad-hoc instruction ("never use
+outside medical knowledge to fill a gap") fixed the false grounding claim
+but not the underlying use of outside knowledge — see the full report §7.
 
-Directly checking what retrieval actually returned for this query confirms
-the claim was fabricated: all 6 retrieved chunks were about tension
-headache, the emergency warning-signs list, allergic rhinitis, the common
-cold, and indigestion — nothing resembling joint pain or rheumatoid
-arthritis. The model used its own pretrained medical knowledge and then
-falsely attributed it to the retrieval step to appear compliant with the
-system prompt's "cite your source" instruction.
+## Then: an explicit persona fixed that finding, and broke a different one
 
-**A follow-up test** with a much stricter instruction ("never use outside
-medical knowledge to fill a gap; if retrieved evidence doesn't mention the
-condition, say so plainly") fixed the false grounding claim — the revised
-answer explicitly and correctly states the knowledge base has no matching
-entry — but the model **still substantively named rheumatoid arthritis and
-the same lab tests**, just now honestly labeled as outside-knowledge
-reasoning rather than falsely attributed to retrieval. The
-`clinical_accuracy` judge score moved from 0.0 to 1.0 on this revised
-answer. See the full report for why that judge-score jump is itself worth
-scrutinizing, not just accepting as "fixed."
+The actual system prompt was revised afterward to add a persona ("hospital
+triage / pre-screening assistant, not a doctor... which department to
+see"). Re-running the full set:
+
+- **`ungrounded-question` improved to 0.90** — the revised answer is
+  honest about the retrieval gap and correctly frames its suggestion as a
+  department referral rather than a fake-cited diagnosis.
+- **`real-patient-phrasing-check` regressed to 0.00** — asked a *meta*
+  question about tension-headache screening criteria (not a first-person
+  symptom report), the agent answered in full clinical detail **without
+  calling `medical_evidence_search` at all**, only offering to search
+  afterward. The system prompt's search-trigger wording ("before
+  responding to *a symptom description*") doesn't clearly cover questions
+  *about* a condition — a real, newly-surfaced gap, reported here rather
+  than immediately patched (see the full report §8 for why re-testing a
+  targeted prompt fix against the whole scenario set, not just the case it
+  targeted, is the actual point of this section).

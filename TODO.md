@@ -129,20 +129,26 @@ setup (Bailian agent / DeepSeek judge) was immediately available.
       base actually has a matching entry; plain "no evidence for this"
       otherwise. New `clinical_accuracy` conversation-judge dimension
       (`agent_eval/judge.py`) added alongside the existing retention/
-      completeness pair. 5/6 conversations scored a clean 1.0/1.0/1.0,
+      completeness pair. 4/6 conversations scored a clean 1.0/1.0/1.0,
       including correctly *revising* an assessment mid-conversation once a
       correction turned a low-risk symptom into a red flag, and correctly
       separating a red flag from a low-risk symptom in one mixed message.
-      The 6th (`ungrounded-question`) caught the agent fabricating a
+      `ungrounded-question` originally caught the agent fabricating a
       diagnosis (rheumatoid arthritis, specific lab tests) for a symptom
       with zero matching retrieved evidence, **and falsely claiming the
       fabrication came from retrieval** — verified by directly querying
-      the pipeline and confirming none of the 6 actually-retrieved chunks
-      were relevant. A follow-up mitigation test (stricter anti-
-      hallucination instruction) fixed the false grounding claim but not
-      the underlying use of outside knowledge — flagged as a real,
-      unresolved judge-dimension precision question, not something
-      quietly patched. Also discovered mid-project that a real HuggingFace
+      the pipeline. Adding an explicit persona to the system prompt
+      ("hospital triage/pre-screening assistant, not a doctor") afterward
+      fixed that specific case (0.0 → 0.90) — but the same re-run caught a
+      *new* regression in a different scenario (`real-patient-phrasing-
+      check`, tool usage dropped to 0): the agent skipped the mandatory
+      search step entirely for a meta-question about a condition rather
+      than a first-person symptom report, exposing an ambiguity in the
+      prompt's own "before responding to a symptom description" wording.
+      Reported as-is rather than patched again — the point being that a
+      prompt fix aimed at one failure mode needs re-testing against the
+      *whole* scenario set, not just the case it targeted. Also discovered
+      mid-project that a real HuggingFace
       medical dataset's "encyclopedia" content is actually unreliable
       crowd-sourced forum Q&A, unsuitable as corpus content — resolved by
       using authoritative MedlinePlus pages for the knowledge base while
