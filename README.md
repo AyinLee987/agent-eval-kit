@@ -59,10 +59,18 @@ inconsistency at all — all four phrasings computed the same correct answer,
 the embedding was reacting to answer verbosity, not content. See
 [`reports/robustness-evaluation.md`](reports/robustness-evaluation.md).
 
-The multi-agent latency/failure-isolation benchmark against
-`MultiAgentOrchestrator`, and the remaining categories in the broader
-agent-evaluation plan (safety, business-scenario), have not been run yet —
-that's next. See [`TODO.md`](TODO.md) for the full roadmap.
+The multi-agent latency/failure-isolation benchmark has also been run for
+real against `MultiAgentOrchestrator`: real concurrent Worker dispatch (no
+synthetic `time.sleep` stand-ins) against 6 independent tasks tracked
+`max_parallel_tasks` cleanly — 2.33x speedup at k=2, 4.00x at k=3, 6.50x at
+k=6 over a sequential baseline — and, with real data for the first time,
+confirmed the sibling repo's README claim that a fatal error in one
+concurrently-running Worker doesn't affect the others. See
+[`reports/multi-agent-latency-evaluation.md`](reports/multi-agent-latency-evaluation.md).
+
+The remaining categories in the broader agent-evaluation plan (safety,
+business-scenario) have not been run yet — that's next. See
+[`TODO.md`](TODO.md) for the full roadmap.
 
 ## Why this exists
 
@@ -130,6 +138,10 @@ benchmarks/
                           translation), answers compared by embedding
                           similarity — queries.py, tools.py,
                           cached_embeddings.py, run_benchmark.py, RESULTS.md
+  multi_agent_latency/    real MultiAgentOrchestrator concurrent dispatch vs.
+                          a sequential agent.run() loop, plus two
+                          failure-isolation tests — tasks.json, tools.py,
+                          run_benchmark.py, RESULTS.md
 reports/
   rag-recall-evaluation.md        formal write-up of the RAG benchmark above
   agent-trajectory-evaluation.md  formal write-up of the trajectory-judge
@@ -141,6 +153,9 @@ reports/
   robustness-evaluation.md        formal write-up of the robustness benchmark,
                                    including why its lowest-scoring question
                                    wasn't actually an inconsistency
+  multi-agent-latency-evaluation.md  formal write-up of the concurrency
+                                   benchmark, including real-data verification
+                                   of the sibling repo's failure-isolation claim
 tests/
   test_scoring.py            single-turn scorers (rule/tool-usage/trajectory/
                               answer-relevancy/LLM-judge)
@@ -225,10 +240,9 @@ you it finished, not what it saved.
 
 **What I'd add to make this a "full" toolkit** (see `TODO.md`): a
 `Scorer`-shaped wrapper around the new `agent_eval.similarity` primitive for
-grading open-ended answers against a reference without an LLM judge call; a
-LangChain adapter to prove the framework-agnostic claim against a second real
-framework, not just an internal baseline; and a real concurrency benchmark
-against `MultiAgentOrchestrator` instead of synthetic `time.sleep` cases.
+grading open-ended answers against a reference without an LLM judge call,
+and a LangChain adapter to prove the framework-agnostic claim against a
+second real framework, not just an internal baseline.
 
 ## License
 

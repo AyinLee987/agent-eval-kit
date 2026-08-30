@@ -1,0 +1,208 @@
+{
+  "baseline": {
+    "task_count": 6,
+    "serial_seconds": 19.732111099991016,
+    "success_count": 6
+  },
+  "parallel_runs": [
+    {
+      "max_parallel_tasks": 1,
+      "task_count": 6,
+      "parallel_seconds": 15.987984099978348,
+      "success_count": 6,
+      "failure_count": 0,
+      "tasks": [
+        {
+          "task_id": "36b4a2125e01",
+          "success": true,
+          "queue_seconds": 0.001588582992553711,
+          "exec_seconds": 3.2739055156707764
+        },
+        {
+          "task_id": "5c3e76e47124",
+          "success": true,
+          "queue_seconds": 3.2741265296936035,
+          "exec_seconds": 2.456988573074341
+        },
+        {
+          "task_id": "59fcafe2c6ca",
+          "success": true,
+          "queue_seconds": 5.731105327606201,
+          "exec_seconds": 2.1510684490203857
+        },
+        {
+          "task_id": "95126eda5b4d",
+          "success": true,
+          "queue_seconds": 7.882168292999268,
+          "exec_seconds": 2.3558266162872314
+        },
+        {
+          "task_id": "0fe777da19ed",
+          "success": true,
+          "queue_seconds": 10.23799729347229,
+          "exec_seconds": 2.5602221488952637
+        },
+        {
+          "task_id": "1078c3971b4a",
+          "success": true,
+          "queue_seconds": 12.798228740692139,
+          "exec_seconds": 3.188055992126465
+        }
+      ],
+      "speedup_vs_serial": 1.234183808077326
+    },
+    {
+      "max_parallel_tasks": 2,
+      "task_count": 6,
+      "parallel_seconds": 8.485912400006782,
+      "success_count": 6,
+      "failure_count": 0,
+      "tasks": [
+        {
+          "task_id": "d53e3a236ff6",
+          "success": true,
+          "queue_seconds": 0.0006725788116455078,
+          "exec_seconds": 2.151873826980591
+        },
+        {
+          "task_id": "63b659d4e6ce",
+          "success": true,
+          "queue_seconds": 0.0004150867462158203,
+          "exec_seconds": 3.057739019393921
+        },
+        {
+          "task_id": "06e8f28a39f7",
+          "success": true,
+          "queue_seconds": 2.151998996734619,
+          "exec_seconds": 2.953472852706909
+        },
+        {
+          "task_id": "153cbe771c18",
+          "success": true,
+          "queue_seconds": 3.057926893234253,
+          "exec_seconds": 3.2799909114837646
+        },
+        {
+          "task_id": "66231b67c2ef",
+          "success": true,
+          "queue_seconds": 5.105449199676514,
+          "exec_seconds": 2.764427900314331
+        },
+        {
+          "task_id": "feaf9e5d603e",
+          "success": true,
+          "queue_seconds": 6.337936162948608,
+          "exec_seconds": 2.147216320037842
+        }
+      ],
+      "speedup_vs_serial": 2.3252786700903543
+    },
+    {
+      "max_parallel_tasks": 3,
+      "task_count": 6,
+      "parallel_seconds": 4.932874699996319,
+      "success_count": 6,
+      "failure_count": 0,
+      "tasks": [
+        {
+          "task_id": "ea7f3379f9b3",
+          "success": true,
+          "queue_seconds": 0.0007736682891845703,
+          "exec_seconds": 2.0149316787719727
+        },
+        {
+          "task_id": "838935e91425",
+          "success": true,
+          "queue_seconds": 0.00045609474182128906,
+          "exec_seconds": 2.2129580974578857
+        },
+        {
+          "task_id": "4de837f0d1ce",
+          "success": true,
+          "queue_seconds": 0.0003936290740966797,
+          "exec_seconds": 2.071744441986084
+        },
+        {
+          "task_id": "2580adc63c0f",
+          "success": true,
+          "queue_seconds": 2.015131950378418,
+          "exec_seconds": 2.0389740467071533
+        },
+        {
+          "task_id": "9c6c52b49b07",
+          "success": true,
+          "queue_seconds": 2.071972608566284,
+          "exec_seconds": 2.8601632118225098
+        },
+        {
+          "task_id": "5aed39712d21",
+          "success": true,
+          "queue_seconds": 2.213017463684082,
+          "exec_seconds": 2.175593376159668
+        }
+      ],
+      "speedup_vs_serial": 4.000124126405591
+    },
+    {
+      "max_parallel_tasks": 6,
+      "task_count": 6,
+      "parallel_seconds": 3.034282299980987,
+      "success_count": 6,
+      "failure_count": 0,
+      "tasks": [
+        {
+          "task_id": "19dde10b7d6b",
+          "success": true,
+          "queue_seconds": 0.002730131149291992,
+          "exec_seconds": 2.029383420944214
+        },
+        {
+          "task_id": "3aabec302a68",
+          "success": true,
+          "queue_seconds": 0.0020494461059570312,
+          "exec_seconds": 3.027770519256592
+        },
+        {
+          "task_id": "06b5eedee41b",
+          "success": true,
+          "queue_seconds": 0.003041982650756836,
+          "exec_seconds": 2.66318678855896
+        },
+        {
+          "task_id": "d1759e56c276",
+          "success": true,
+          "queue_seconds": 0.0022096633911132812,
+          "exec_seconds": 3.031477451324463
+        },
+        {
+          "task_id": "46373a979557",
+          "success": true,
+          "queue_seconds": 0.002606630325317383,
+          "exec_seconds": 2.82550048828125
+        },
+        {
+          "task_id": "64c6890dfa92",
+          "success": true,
+          "queue_seconds": 0.002886056900024414,
+          "exec_seconds": 2.1287314891815186
+        }
+      ],
+      "speedup_vs_serial": 6.503057115059683
+    }
+  ],
+  "failure_isolation": {
+    "preflight_invalid_role": {
+      "preflight_rejected": true,
+      "preflight_error": "Unknown subagent role 'not-a-real-role'. Available roles: worker, broken-worker.",
+      "other_tasks_total": 6,
+      "other_tasks_succeeded": 6
+    },
+    "midrun_fatal_tool_error": {
+      "broken_task_success": false,
+      "broken_task_stop_reason": "fatal_tool_error",
+      "broken_task_error_type": "fatal_tool_error",
+      "normal_tasks_total": 5,
+      "normal_tasks_succeeded": 5
+    }
+  }
+}

@@ -37,13 +37,21 @@ expanding on for a resume/portfolio writeup.
       a real rubric bug (judge scored "correctly used no tool" as 0.0) —
       only visible because rule-based scorers ran alongside the judge on
       the same tasks.
-- [ ] **Multi-agent latency benchmark.** Drive
-      `MultiAgentOrchestrator.spawn_subagent` + `wait_subagents` against N
-      independent worker tasks and compare wall-clock time to a sequential
-      loop of `agent.run()` calls, across a few `max_parallel_tasks` values.
-      Also measure failure isolation: inject a fatal error into one worker
-      and confirm the others still complete (the concurrency benchmark's
-      `failure_count` already reports this shape).
+- [x] **Multi-agent latency benchmark.** Done — see
+      `benchmarks/multi_agent_latency/RESULTS.md` and
+      `reports/multi-agent-latency-evaluation.md`. Real `spawn_subagent` +
+      `wait_subagents` (direct calls, bypassing a Leader LLM's own
+      delegate-or-not decision, to isolate pure dispatch latency) against 6
+      independent single-tool tasks, real Bailian calls throughout — no
+      synthetic `time.sleep` stand-ins. Speedup vs. a sequential
+      `agent.run()` loop tracked `max_parallel_tasks` cleanly: 2.33x at
+      k=2, 4.00x at k=3, 6.50x at k=6, all explained directly by per-task
+      queue/exec timing (`SubagentTask.created_at/started_at/finished_at`).
+      Also verified, with real data for the first time, the sibling repo's
+      README claim "a child fatal error terminates only that child" — both
+      a pre-flight validation failure (unknown role) and a mid-run
+      `FatalToolError` inside one Worker running concurrently with 5 normal
+      ones left the other tasks unaffected (6/6 and 5/5 respectively).
 - [ ] **Context-compression ablation.** Run the same task set through
       `EvalHarness` with and without `ContextCompressor` wired into the
       agent; report avg tokens/task and success rate side by side to show

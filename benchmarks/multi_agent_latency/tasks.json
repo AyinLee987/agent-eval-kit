@@ -1,0 +1,38 @@
+[
+  {
+    "id": "div-basic",
+    "prompt": "What is 45 divided by 9?",
+    "expect_substrings": ["5"],
+    "expect_tool": "calculator"
+  },
+  {
+    "id": "lookup-sev1",
+    "prompt": "Look up sev1_ack_minutes using lookup_fact.",
+    "expect_substrings": ["15"],
+    "expect_tool": "lookup_fact"
+  },
+  {
+    "id": "sub-basic",
+    "prompt": "What is 100 minus 37?",
+    "expect_substrings": ["63"],
+    "expect_tool": "calculator"
+  },
+  {
+    "id": "lookup-pto",
+    "prompt": "Look up pto_days_per_year using lookup_fact.",
+    "expect_substrings": ["15"],
+    "expect_tool": "lookup_fact"
+  },
+  {
+    "id": "datetime-basic",
+    "prompt": "What is the current date and time? Use current_datetime.",
+    "expect_substrings": [],
+    "expect_tool": "current_datetime"
+  },
+  {
+    "id": "chain-basic",
+    "prompt": "Calculate 8 times 9, then add 10.",
+    "expect_substrings": ["82"],
+    "expect_tool": "calculator"
+  }
+]
