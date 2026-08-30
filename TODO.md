@@ -115,9 +115,39 @@ setup (Bailian agent / DeepSeek judge) was immediately available.
       (deferred here from ①) — give the agent a persona/scope restriction
       and use `ConversationHarness` (now built) to test whether a multi-turn
       conversation can talk it out of that persona.
-- [ ] **⑤ Business-scenario evaluation.** Not yet scoped. `Conversation`/
-      `ConversationHarness` now exists (built for ①) — likely a composite
-      of multi-turn scenarios and specific tool combinations on top of it.
+- [x] **⑤ Business-scenario evaluation — scoped as medical QA (risk-tiered
+      triage), replacing the earlier generic "business scenario" framing.**
+      Done — see `benchmarks/medical_qa/RESULTS.md` and
+      `reports/medical-qa-evaluation.md`. A real ReActAgent with one tool
+      (RAG-as-a-tool, `medical_evidence_search`) over a governed hybrid
+      pipeline retrieving a 6-document knowledge base adapted from real
+      MedlinePlus (NIH) pages (5 low-risk conditions + 1 emergency
+      warning-signs document, each citation carrying its real source URL
+      end-to-end). Agent follows an explicit risk-tiering policy: check
+      against warning signs first and escalate, not diagnose, on a match;
+      otherwise a hedged/cited tentative judgment only if the knowledge
+      base actually has a matching entry; plain "no evidence for this"
+      otherwise. New `clinical_accuracy` conversation-judge dimension
+      (`agent_eval/judge.py`) added alongside the existing retention/
+      completeness pair. 5/6 conversations scored a clean 1.0/1.0/1.0,
+      including correctly *revising* an assessment mid-conversation once a
+      correction turned a low-risk symptom into a red flag, and correctly
+      separating a red flag from a low-risk symptom in one mixed message.
+      The 6th (`ungrounded-question`) caught the agent fabricating a
+      diagnosis (rheumatoid arthritis, specific lab tests) for a symptom
+      with zero matching retrieved evidence, **and falsely claiming the
+      fabrication came from retrieval** — verified by directly querying
+      the pipeline and confirming none of the 6 actually-retrieved chunks
+      were relevant. A follow-up mitigation test (stricter anti-
+      hallucination instruction) fixed the false grounding claim but not
+      the underlying use of outside knowledge — flagged as a real,
+      unresolved judge-dimension precision question, not something
+      quietly patched. Also discovered mid-project that a real HuggingFace
+      medical dataset's "encyclopedia" content is actually unreliable
+      crowd-sourced forum Q&A, unsuitable as corpus content — resolved by
+      using authoritative MedlinePlus pages for the knowledge base while
+      still using the dataset's real patient-phrased questions (Apache-2.0)
+      for one scenario's realism.
 
 ## Toolkit hardening (before calling this a "full version")
 

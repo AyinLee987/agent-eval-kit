@@ -68,9 +68,24 @@ confirmed the sibling repo's README claim that a fatal error in one
 concurrently-running Worker doesn't affect the others. See
 [`reports/multi-agent-latency-evaluation.md`](reports/multi-agent-latency-evaluation.md).
 
-The remaining categories in the broader agent-evaluation plan (safety,
-business-scenario) have not been run yet — that's next. See
-[`TODO.md`](TODO.md) for the full roadmap.
+A medical-QA risk-tiered-triage evaluation has also been run for real —
+this became the project's ⑤ ("business scenario") category: a real agent
+with one tool (RAG-as-a-tool) over a knowledge base adapted from real,
+cited MedlinePlus (NIH) pages, following an explicit policy of escalating
+red-flag symptoms instead of diagnosing them and only ever giving a hedged,
+cited judgment otherwise. 5 of 6 conversations scored a clean 1.0/1.0/1.0,
+including correctly revising an assessment mid-conversation once a
+correction turned a low-risk symptom into a red flag. The 6th caught the
+agent fabricating a diagnosis **and falsely claiming it came from
+retrieval** for a question outside the knowledge base — verified by
+directly re-querying the pipeline — and a follow-up stricter instruction
+fixed the false claim but not the underlying use of outside knowledge, a
+gap documented rather than quietly patched. See
+[`reports/medical-qa-evaluation.md`](reports/medical-qa-evaluation.md).
+
+The remaining category in the broader agent-evaluation plan (safety) has
+not been run yet — that's next. See [`TODO.md`](TODO.md) for the full
+roadmap.
 
 ## Why this exists
 
@@ -142,6 +157,10 @@ benchmarks/
                           a sequential agent.run() loop, plus two
                           failure-isolation tests — tasks.json, tools.py,
                           run_benchmark.py, RESULTS.md
+  medical_qa/             risk-tiered medical triage over a real, cited
+                          MedlinePlus-derived knowledge base (RAG-as-a-tool) —
+                          corpus.py, scenarios.json, cached_embeddings.py,
+                          run_benchmark.py, RESULTS.md
 reports/
   rag-recall-evaluation.md        formal write-up of the RAG benchmark above
   agent-trajectory-evaluation.md  formal write-up of the trajectory-judge
@@ -156,6 +175,9 @@ reports/
   multi-agent-latency-evaluation.md  formal write-up of the concurrency
                                    benchmark, including real-data verification
                                    of the sibling repo's failure-isolation claim
+  medical-qa-evaluation.md        formal write-up of the medical-QA benchmark,
+                                   including a fabricated-diagnosis-with-false-
+                                   grounding finding and a partial mitigation
 tests/
   test_scoring.py            single-turn scorers (rule/tool-usage/trajectory/
                               answer-relevancy/LLM-judge)
