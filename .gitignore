@@ -8,3 +8,4 @@ venv/
 results/*.json
 !results/.gitkeep
 benchmarks/rag_recall/.embedding_cache.json
+benchmarks/robustness/.embedding_cache.json

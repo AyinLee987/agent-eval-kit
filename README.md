@@ -48,10 +48,21 @@ found in the trajectory benchmark (a judge implicitly assuming every turn
 is a question). See
 [`reports/conversational-evaluation.md`](reports/conversational-evaluation.md).
 
+Robustness to paraphrasing, register, and translation has also been run for
+real: the same 8 underlying questions asked 4 ways each (a same-language
+paraphrase, a formal/politeness-noise register shift, and an English
+translation) — 32 single-turn tasks. Content correctness stayed perfect
+(`rule_pass`/`used_expected_tool` both 1.00 across all 32); average
+pairwise answer similarity (a new `agent_eval.similarity` module) was 0.916,
+and digging into the lowest-scoring question showed the dip wasn't an
+inconsistency at all — all four phrasings computed the same correct answer,
+the embedding was reacting to answer verbosity, not content. See
+[`reports/robustness-evaluation.md`](reports/robustness-evaluation.md).
+
 The multi-agent latency/failure-isolation benchmark against
 `MultiAgentOrchestrator`, and the remaining categories in the broader
-agent-evaluation plan (robustness, safety, business-scenario), have not
-been run yet — that's next. See [`TODO.md`](TODO.md) for the full roadmap.
+agent-evaluation plan (safety, business-scenario), have not been run yet —
+that's next. See [`TODO.md`](TODO.md) for the full roadmap.
 
 ## Why this exists
 
@@ -91,6 +102,7 @@ agent_eval/
   conversation_harness.py  ConversationHarness (runs multi-turn conversations,
                            one agent per conversation) + ConversationScorecard
   retrieval_metrics.py     recall_at_k, mrr, ndcg_at_k, evaluate_retrieval
+  similarity.py            cosine_similarity, average_pairwise_similarity (dependency-free)
   concurrency_bench.py     serial-vs-parallel speedup + failure isolation
   cli.py / __main__.py     `python -m agent_eval run ...`
 adapters/
@@ -114,6 +126,10 @@ benchmarks/
   conversational/         multi-turn conversations (retention, cross-turn
                           completeness, tool chaining) graded the same way —
                           tools.py, conversations.json, run_benchmark.py, RESULTS.md
+  robustness/             same question asked 4 ways (paraphrase/register/
+                          translation), answers compared by embedding
+                          similarity — queries.py, tools.py,
+                          cached_embeddings.py, run_benchmark.py, RESULTS.md
 reports/
   rag-recall-evaluation.md        formal write-up of the RAG benchmark above
   agent-trajectory-evaluation.md  formal write-up of the trajectory-judge
@@ -122,9 +138,19 @@ reports/
   conversational-evaluation.md    formal write-up of the multi-turn benchmark,
                                    including a second instance of that same
                                    class of rubric bug
+  robustness-evaluation.md        formal write-up of the robustness benchmark,
+                                   including why its lowest-scoring question
+                                   wasn't actually an inconsistency
 tests/
-  test_scoring.py, test_retrieval_metrics.py, test_concurrency_bench.py,
-  test_harness.py        cover the toolkit end-to-end via the bare baseline
+  test_scoring.py            single-turn scorers (rule/tool-usage/trajectory/
+                              answer-relevancy/LLM-judge)
+  test_conversation.py       multi-turn types, ConversationHarness, conversation
+                              scoring — via a fake agent, no real LLM
+  test_judge.py              judge prompt builders + judge-backed scorers
+  test_harness.py            EvalHarness/Scorecard end-to-end via the bare baseline
+  test_retrieval_metrics.py  Recall@K/MRR/nDCG against plain ranked-id lists
+  test_concurrency_bench.py  serial-vs-parallel speedup + failure isolation
+  test_similarity.py         cosine_similarity / average_pairwise_similarity
 ```
 
 Every scorer and metric operates on plain data (`AgentOutcome`, ranked id
@@ -197,13 +223,12 @@ serial and parallel dispatch against the *same* case set is what makes the
 speedup number mean something; measuring parallel dispatch alone only tells
 you it finished, not what it saved.
 
-**What I'd add to make this a "full" toolkit** (see `TODO.md`): a semantic
-similarity scorer for open-ended answers that doesn't require an LLM judge; a
+**What I'd add to make this a "full" toolkit** (see `TODO.md`): a
+`Scorer`-shaped wrapper around the new `agent_eval.similarity` primitive for
+grading open-ended answers against a reference without an LLM judge call; a
 LangChain adapter to prove the framework-agnostic claim against a second real
-framework, not just an internal baseline; real Recall@K/MRR/nDCG numbers from
-running this against the sibling project's hybrid RAG pipeline; and a real
-concurrency benchmark against `MultiAgentOrchestrator` instead of synthetic
-`time.sleep` cases.
+framework, not just an internal baseline; and a real concurrency benchmark
+against `MultiAgentOrchestrator` instead of synthetic `time.sleep` cases.
 
 ## License
 

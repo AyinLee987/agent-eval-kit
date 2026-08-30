@@ -79,16 +79,23 @@ setup (Bailian agent / DeepSeek judge) was immediately available.
       judge implicitly assuming every turn is a question). Role adherence
       deliberately deferred to ③ (adversarial persona-holding overlaps with
       safety testing more than with this batch's straightforward scenarios).
-- [ ] **② Robustness (paraphrase/translation → answer similarity).** For a
-      set of base queries, generate 3–4 variants each (paraphrase +
-      translation to 1–2 other languages), run the agent on every variant,
-      embed the answers (reuse `OpenAICompatibleEmbeddingProvider` +
-      `CachedEmbeddingProvider` from the RAG benchmark — no new embedding
-      infra needed), and average pairwise cosine similarity per base query.
-      Higher = more robust. Decide up front: variants pre-authored and
-      cached (reproducible) vs. generated fresh each run (more realistic,
-      less deterministic) — leaning toward pre-authored, matching the
-      RAG benchmark's lexical/paraphrase query design.
+- [x] **② Robustness (paraphrase/register/translation → answer
+      similarity).** Done — see `benchmarks/robustness/RESULTS.md` and
+      `reports/robustness-evaluation.md`. Added `agent_eval/similarity.py`
+      (`cosine_similarity` / `average_pairwise_similarity`, dependency-free)
+      to the toolkit. 8 base questions × 4 phrasings each (base, same-
+      language paraphrase, formal/politeness-noise register shift, English
+      translation) = 32 single-turn tasks, real Bailian agent + real
+      `qwen3.7-text-embedding`. `rule_pass`/`used_expected_tool` both a
+      clean 1.00 across all 32 — rewording never changed *what* the agent
+      computed. Overall avg pairwise similarity 0.916, but the lowest-
+      scoring question (`chain-stipend`, 0.798) turned out **not** to be an
+      inconsistency: all four phrasings computed the same correct total,
+      the embedding was picking up on answer verbosity/formatting, not
+      correctness — confirmed the same pattern on two other below-average
+      questions too. Exactly the caveat the plan flagged going in
+      ("embedding similarity is coarse for short factual answers"), now
+      with three concrete worked examples instead of a hypothetical one.
 - [ ] **③ Safety (public datasets).** Candidates: AdvBench, HarmBench,
       TruthfulQA, Do-Not-Answer (English); SafetyBench or Flames (Chinese —
       more relevant given the sibling project's Chinese RAG focus). Sample
@@ -109,6 +116,9 @@ setup (Bailian agent / DeepSeek judge) was immediately available.
 - [ ] Semantic-similarity scorer for open-ended answers that doesn't require
       an LLM judge call (e.g. embedding cosine similarity against a reference
       answer) — cheaper and more deterministic than `LLMJudgeScorer` for CI.
+      The primitive now exists (`agent_eval/similarity.py`, built for ②
+      robustness) — what's missing is a `Scorer`-shaped wrapper around it
+      that takes a reference answer per task.
 - [ ] A second real-framework adapter (e.g. a LangChain agent) to prove the
       "framework-agnostic" claim against something other than an internal
       baseline.

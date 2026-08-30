@@ -43,6 +43,7 @@ from .retrieval_metrics import (
     recall_at_k,
 )
 from .concurrency_bench import ConcurrencyCase, ConcurrencyReport, benchmark
+from .similarity import average_pairwise_similarity, cosine_similarity
 
 __all__ = [
     "AgentOutcome",
@@ -83,4 +84,6 @@ __all__ = [
     "ConcurrencyCase",
     "ConcurrencyReport",
     "benchmark",
+    "average_pairwise_similarity",
+    "cosine_similarity",
 ]

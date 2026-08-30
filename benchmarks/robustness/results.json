@@ -1,0 +1,249 @@
+{
+  "aggregate": {
+    "rule_pass": 1.0,
+    "used_expected_tool": 1.0
+  },
+  "overall_avg_similarity": 0.9159131208018523,
+  "cases": [
+    {
+      "id": "calc-basic",
+      "avg_pairwise_similarity": 0.9741257565113184,
+      "phrasings": {
+        "base": {
+          "prompt": "帮我算一下23乘以17是多少。",
+          "answer": "23 乘以 17 等于 391。",
+          "rule_pass": true,
+          "used_expected_tool": true
+        },
+        "paraphrase": {
+          "prompt": "23和17相乘，结果等于多少？",
+          "answer": "23 和 17 相乘的结果是 391。",
+          "rule_pass": true,
+          "used_expected_tool": true
+        },
+        "register": {
+          "prompt": "劳驾，麻烦帮忙算一下23乘17是多少，谢谢。",
+          "answer": "23 乘 17 等于 391。",
+          "rule_pass": true,
+          "used_expected_tool": true
+        },
+        "translation": {
+          "prompt": "Could you calculate what 23 times 17 is?",
+          "answer": "23 times 17 is 391.",
+          "rule_pass": true,
+          "used_expected_tool": true
+        }
+      }
+    },
+    {
+      "id": "calc-compound",
+      "avg_pairwise_similarity": 0.9103634890225841,
+      "phrasings": {
+        "base": {
+          "prompt": "计算(12加8)乘以5，再减去30，结果是多少。",
+          "answer": "结果是70。",
+          "rule_pass": true,
+          "used_expected_tool": true
+        },
+        "paraphrase": {
+          "prompt": "先把12和8相加，乘以5，然后减去30，最终是多少？",
+          "answer": "最终结果是 70。",
+          "rule_pass": true,
+          "used_expected_tool": true
+        },
+        "register": {
+          "prompt": "麻烦您帮我算一下：(12加8)乘以5，再减30，谢谢配合。",
+          "answer": "计算结果是 70。",
+          "rule_pass": true,
+          "used_expected_tool": true
+        },
+        "translation": {
+          "prompt": "What do you get if you add 12 and 8, multiply by 5, and then subtract 30?",
+          "answer": "The result is 70.",
+          "rule_pass": true,
+          "used_expected_tool": true
+        }
+      }
+    },
+    {
+      "id": "lookup-pto",
+      "avg_pairwise_similarity": 0.9124241665309217,
+      "phrasings": {
+        "base": {
+          "prompt": "用lookup_fact查一下pto_days_per_year的值。",
+          "answer": "pto_days_per_year 的值是 15。",
+          "rule_pass": true,
+          "used_expected_tool": true
+        },
+        "paraphrase": {
+          "prompt": "我们公司一年的带薪年假天数（pto_days_per_year）是多少？查一下。",
+          "answer": "我们公司一年的带薪年假天数（PTO days per year）是15天。",
+          "rule_pass": true,
+          "used_expected_tool": true
+        },
+        "register": {
+          "prompt": "劳烦帮我确认一下pto_days_per_year这个字段对应的具体数值。",
+          "answer": "pto_days_per_year 对应的具体数值是 15。",
+          "rule_pass": true,
+          "used_expected_tool": true
+        },
+        "translation": {
+          "prompt": "Could you look up the value of pto_days_per_year using lookup_fact?",
+          "answer": "The value of `pto_days_per_year` is 15.",
+          "rule_pass": true,
+          "used_expected_tool": true
+        }
+      }
+    },
+    {
+      "id": "lookup-ratelimit",
+      "avg_pairwise_similarity": 0.9694295151472034,
+      "phrasings": {
+        "base": {
+          "prompt": "用lookup_fact查一下standard_rate_limit_rpm的值是多少。",
+          "answer": "standard_rate_limit_rpm 的值是 60。",
+          "rule_pass": true,
+          "used_expected_tool": true
+        },
+        "paraphrase": {
+          "prompt": "标准的每分钟请求限制，也就是standard_rate_limit_rpm，数值是多少？",
+          "answer": "标准的每分钟请求限制（standard_rate_limit_rpm）是 60。",
+          "rule_pass": true,
+          "used_expected_tool": true
+        },
+        "register": {
+          "prompt": "麻烦帮忙查证一下standard_rate_limit_rpm的具体数值，多谢。",
+          "answer": "standard_rate_limit_rpm 的具体数值是 60。",
+          "rule_pass": true,
+          "used_expected_tool": true
+        },
+        "translation": {
+          "prompt": "Please look up the value of standard_rate_limit_rpm using lookup_fact.",
+          "answer": "The value of `standard_rate_limit_rpm` is 60.",
+          "rule_pass": true,
+          "used_expected_tool": true
+        }
+      }
+    },
+    {
+      "id": "chain-stipend",
+      "avg_pairwise_similarity": 0.7982243046233686,
+      "phrasings": {
+        "base": {
+          "prompt": "查一下oncall_stipend_usd的值，然后算出一个季度值班3次总共多少钱。",
+          "answer": "oncall_stipend_usd 的值是 200 美元，一个季度值班 3 次总共是 600 美元。",
+          "rule_pass": true,
+          "used_expected_tool": null
+        },
+        "paraphrase": {
+          "prompt": "先用lookup_fact查oncall_stipend_usd这个值，再帮我算出一个季度轮值3次一共是多少钱。",
+          "answer": "一个季度轮值3次的总金额是600美元。",
+          "rule_pass": true,
+          "used_expected_tool": null
+        },
+        "register": {
+          "prompt": "劳驾先查一下oncall_stipend_usd的值，再麻烦计算一下一个季度值班3次总共需要支付多少，谢谢。",
+          "answer": "oncall_stipend_usd 的值是 200 美元，一个季度值班 3 次总共需要支付 600 美元。",
+          "rule_pass": true,
+          "used_expected_tool": null
+        },
+        "translation": {
+          "prompt": "Look up oncall_stipend_usd, then calculate the total for 3 on-call shifts in one quarter.",
+          "answer": "The on-call stipend per shift is $200. For 3 on-call shifts in one quarter, the total is $600.",
+          "rule_pass": true,
+          "used_expected_tool": null
+        }
+      }
+    },
+    {
+      "id": "datetime-check",
+      "avg_pairwise_similarity": 0.9098943784004415,
+      "phrasings": {
+        "base": {
+          "prompt": "现在几点了？用current_datetime查一下。",
+          "answer": "现在是 UTC 时间 2026 年 8 月 30 日 08:05:44。",
+          "rule_pass": true,
+          "used_expected_tool": true
+        },
+        "paraphrase": {
+          "prompt": "帮我看看现在的日期和时间是多少。",
+          "answer": "现在的日期和时间是：2026年8月30日 08:05:46（UTC）。",
+          "rule_pass": true,
+          "used_expected_tool": true
+        },
+        "register": {
+          "prompt": "劳烦查一下当前的日期时间，谢谢。",
+          "answer": "当前的日期时间是：2026年8月30日 08:05:49（UTC）。",
+          "rule_pass": true,
+          "used_expected_tool": true
+        },
+        "translation": {
+          "prompt": "Could you check the current date and time using current_datetime?",
+          "answer": "The current date and time is **2026-08-30 at 08:05:51 UTC**.",
+          "rule_pass": true,
+          "used_expected_tool": true
+        }
+      }
+    },
+    {
+      "id": "fact-speed-of-light",
+      "avg_pairwise_similarity": 0.9001494065642547,
+      "phrasings": {
+        "base": {
+          "prompt": "光在真空中的速度大约是多少？",
+          "answer": "光在真空中的速度大约是 $ 299{,}792{,}458 $ 米每秒（m/s）。",
+          "rule_pass": true,
+          "used_expected_tool": null
+        },
+        "paraphrase": {
+          "prompt": "光速大概是多少？",
+          "answer": "光在真空中的速度约为每秒 299,792,458 米，通常近似为 **3.0 × 10⁸ 米/秒**（即每秒 30 万公里）。\n\n这是物理学中的一个基本常数，记作 **c**。",
+          "rule_pass": true,
+          "used_expected_tool": null
+        },
+        "register": {
+          "prompt": "请问一下，光速的大致数值是多少？",
+          "answer": "光在真空中的速度（即光速）的大致数值是 **299,792,458 米每秒**（m/s），通常近似为 **3.0 × 10⁸ m/s**。",
+          "rule_pass": true,
+          "used_expected_tool": null
+        },
+        "translation": {
+          "prompt": "What is the approximate speed of light?",
+          "answer": "The approximate speed of light in a vacuum is **299,792,458 meters per second**, often rounded to **3.0 × 10⁸ m/s** for general calculations.",
+          "rule_pass": true,
+          "used_expected_tool": null
+        }
+      }
+    },
+    {
+      "id": "fact-boiling-point",
+      "avg_pairwise_similarity": 0.9526939496147261,
+      "phrasings": {
+        "base": {
+          "prompt": "水在标准大气压下的沸点是多少摄氏度？",
+          "answer": "水在标准大气压（101.325 kPa）下的沸点是 **100 摄氏度**。",
+          "rule_pass": true,
+          "used_expected_tool": null
+        },
+        "paraphrase": {
+          "prompt": "标准大气压下，水烧开的温度是多少度？",
+          "answer": "在标准大气压（101.325 kPa）下，水的沸点是 **100°C**。",
+          "rule_pass": true,
+          "used_expected_tool": null
+        },
+        "register": {
+          "prompt": "劳驾请教一下，水在标准大气压下的沸点具体是多少摄氏度？",
+          "answer": "水在标准大气压（101.325 kPa）下的沸点是 **100 摄氏度**。",
+          "rule_pass": true,
+          "used_expected_tool": null
+        },
+        "translation": {
+          "prompt": "What is the boiling point of water at standard atmospheric pressure, in Celsius?",
+          "answer": "The boiling point of water at standard atmospheric pressure is 100°C.",
+          "rule_pass": true,
+          "used_expected_tool": null
+        }
+      }
+    }
+  ]
+}
