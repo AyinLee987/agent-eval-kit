@@ -28,6 +28,22 @@ synthetic corpus — read it before citing a number from it), or
 the full write-up (objective, methodology, complete results tables, threats
 to validity, and the full labeled query set as an appendix).
 
+That result now also has statistical backing and a replication on a
+published benchmark, not just a bigger corpus. `agent_eval/stats.py` adds a
+dependency-free bootstrap CI / paired significance test, wired into
+`rag_recall`'s own results (**diff=+0.182, p=0.000** for hybrid vs.
+BM25-only at n=24 — not resampling noise), and
+[`benchmarks/rag_recall_beir/RESULTS.md`](benchmarks/rag_recall_beir/RESULTS.md)
+reruns the identical four-pipeline ablation against
+[BEIR NFCorpus](https://github.com/beir-cellar/beir) — 3,633 real biomedical
+documents, 323 real relevance-judged queries, not self-authored — where the
+same headline comparison replicates (**+11.9pp MRR, p=0.000, n=323**) but a
+second finding from the synthetic run (the default `HeuristicReranker`
+reducing MRR) does *not* clear significance at 13x the query count
+(p=0.007 → p=0.262) — a concrete, measured instance of exactly the
+"smaller gaps are not reliable" caveat the synthetic benchmark's own
+results already warned about.
+
 Trajectory-level evaluation with a cross-model LLM judge has also been run
 for real: a Bailian `qwen-plus` agent judged by an independent DeepSeek
 model across four dimensions (tool selection, tool execution, process
@@ -125,6 +141,7 @@ agent_eval/
   conversation_harness.py  ConversationHarness (runs multi-turn conversations,
                            one agent per conversation) + ConversationScorecard
   retrieval_metrics.py     recall_at_k, mrr, ndcg_at_k, evaluate_retrieval
+  stats.py                 bootstrap_ci, paired_bootstrap_test (dependency-free)
   similarity.py            cosine_similarity, average_pairwise_similarity (dependency-free)
   concurrency_bench.py     serial-vs-parallel speedup + failure isolation
   cli.py / __main__.py     `python -m agent_eval run ...`
@@ -143,6 +160,9 @@ benchmarks/
                           project's hybrid pipeline — corpus.py (synthetic
                           docs), queries.py (labeled cases), run_benchmark.py,
                           RESULTS.md (numbers + methodology + caveats)
+  rag_recall_beir/        same ablation on BEIR NFCorpus (published, not
+                          self-authored) — download_nfcorpus.py, corpus.json/
+                          queries.json/qrels.json, run_benchmark.py, RESULTS.md
   agent_trajectory/       real ReActAgent (Bailian) graded by an independent
                           DeepSeek judge across 4 trajectory dimensions —
                           tools.py, tasks.json, run_benchmark.py, RESULTS.md

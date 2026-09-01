@@ -50,6 +50,7 @@ from agent import (  # noqa: E402
 from agent.rag.models import MedicalQuery  # noqa: E402
 
 from agent_eval.retrieval_metrics import RetrievalCase, evaluate_retrieval  # noqa: E402
+from agent_eval.stats import bootstrap_ci, paired_bootstrap_test  # noqa: E402
 
 from cached_embeddings import CachedEmbeddingProvider  # noqa: E402
 from corpus import DOCUMENTS, render_markdown  # noqa: E402
@@ -180,6 +181,14 @@ def make_retrieve_fn(pipeline: RAGPipeline):
     return retrieve
 
 
+#: The two comparisons RESULTS.md's headline claims actually rest on:
+#: "hybrid RRF beats BM25-only" and "the heuristic reranker hurts relative
+#: to plain RRF fusion". Every pipeline is run against the same fixed
+#: ``cases`` list in the same order, so their per_query rows line up
+#: index-for-index -- exactly what paired_bootstrap_test needs.
+SIGNIFICANCE_PAIRS = (("bm25_only", "hybrid_rrf"), ("hybrid_rrf", "hybrid_rerank"))
+
+
 def main() -> None:
     repository, bm25, dense, embeddings = build_repository_and_retrievers()
     check_one_chunk_per_section(repository)
@@ -193,6 +202,7 @@ def main() -> None:
     pipelines = build_pipelines(repository, bm25, dense)
 
     summary: Dict[str, dict] = {}
+    mrr_per_query: Dict[str, List[float]] = {}
     print(f"Corpus: {len(DOCUMENTS)} documents, {len(cases)} labeled queries.")
     print(f"Embedding model: {embeddings.model_id}  ({embeddings.stats()['cached_vectors']} vectors cached)\n")
 
@@ -201,6 +211,11 @@ def main() -> None:
         overall = evaluate_retrieval(cases, retrieve, name=name, k_values=K_VALUES)
         print(overall.render())
 
+        mrr_values = [row["mrr"] for row in overall.per_query]
+        mrr_per_query[name] = mrr_values
+        mrr_ci = bootstrap_ci(mrr_values, seed=0)
+        print(f"  mrr 95% CI: {mrr_ci.render()}")
+
         by_style = {}
         for style in ("lexical", "paraphrase"):
             subset = [c for c in cases if style_by_query[c.query] == style]
@@ -208,12 +223,33 @@ def main() -> None:
             by_style[style] = report.average()
             print("  " + report.render())
 
-        summary[name] = {"overall": overall.average(), "by_style": by_style}
+        summary[name] = {
+            "overall": overall.average(),
+            "by_style": by_style,
+            "mrr_95ci": {"low": mrr_ci.low, "high": mrr_ci.high},
+        }
         print()
+
+    print("Paired bootstrap significance (MRR, same 24 queries both sides):")
+    significance: Dict[str, dict] = {}
+    for a_name, b_name in SIGNIFICANCE_PAIRS:
+        test = paired_bootstrap_test(mrr_per_query[a_name], mrr_per_query[b_name], seed=0)
+        print(f"  {a_name} -> {b_name}: {test.render()}")
+        significance[f"{a_name}_vs_{b_name}"] = {
+            "mean_diff": test.mean_diff,
+            "p_value": test.p_value,
+        }
+    summary["_significance"] = significance
+    embeddings.flush()  # catch whatever's accumulated since the last periodic flush
+    print(
+        "\nRead p >= 0.05 as 'this benchmark's n=24 queries cannot rule out "
+        "resampling noise producing a gap this size' -- not as 'no real "
+        "difference exists'. See RESULTS.md's caveats section."
+    )
 
     with open(RESULTS_PATH, "w", encoding="utf-8") as fh:
         json.dump(summary, fh, indent=2)
-    print(f"Full results written to {RESULTS_PATH}")
+    print(f"\nFull results written to {RESULTS_PATH}")
 
 
 if __name__ == "__main__":

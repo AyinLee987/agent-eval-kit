@@ -30,15 +30,21 @@ per-style numbers are in `results.json`; this file is the write-up.
 
 ## Results (n=24 queries, k=5)
 
-| Pipeline               | MRR   | Recall@5 | Recall@10 | nDCG@10 |
-|-------------------------|-------|----------|-----------|---------|
-| BM25-only               | 0.648 | 0.750    | 0.792     | 0.680   |
-| Dense-only              | 0.714 | 0.875    | 0.875     | 0.749   |
-| **Hybrid (RRF)**        | **0.830** | **0.875** | **0.917** | **0.851** |
-| Hybrid + HeuristicReranker | 0.711 | 0.833  | 0.917     | 0.760   |
+| Pipeline               | MRR   | MRR 95% CI (bootstrap) | Recall@5 | Recall@10 | nDCG@10 |
+|-------------------------|-------|-------------------------|----------|-----------|---------|
+| BM25-only               | 0.648 | [0.475, 0.806] | 0.750    | 0.792     | 0.680   |
+| Dense-only              | 0.714 | [0.552, 0.862] | 0.875    | 0.875     | 0.749   |
+| **Hybrid (RRF)**        | **0.830** | **[0.684, 0.958]** | **0.875** | **0.917** | **0.851** |
+| Hybrid + HeuristicReranker | 0.711 | [0.548, 0.861] | 0.833  | 0.917     | 0.760   |
 
 **Hybrid RRF vs. BM25-only baseline: MRR +18.2pp (0.648→0.830), Recall@5
-+12.5pp (0.750→0.875).**
++12.5pp (0.750→0.875).** Paired bootstrap test (`agent_eval.stats.
+paired_bootstrap_test`, 10k resamples over the same 24 queries both sides):
+**diff=+0.182, p=0.000** — not resampling noise at this n. The
+HeuristicReranker's drop vs. plain RRF (0.830→0.711) is also significant
+(diff=−0.118, p=0.007). Both figures, plus every pipeline's CI, are
+regenerated on every run into `results.json`'s `_significance` /
+`mrr_95ci` keys — see `run_benchmark.py`.
 
 ### By query style (n=12 each), Recall@5
 
@@ -74,15 +80,27 @@ demonstration of *why* that matters, not just a caveat in prose.
 ## Caveats (read before citing a number from this on a resume)
 
 - **n=24 queries / 36 chunks** is small — each query is worth ~4pp (~8pp
-  within a 12-query style subset), so single-digit-pp differences are noise.
-  The MRR gap between BM25-only and hybrid RRF (18pp) and the paraphrase
-  Recall@5 gap (BM25 vs. dense-only, 25pp) are large enough to trust as
-  directional; smaller gaps between the two hybrid variants are not.
-- **One embedding model, one run.** No repeated sampling, no confidence
-  interval, no second embedding model for comparison.
+  within a 12-query style subset). The bootstrap CIs above are the honest
+  picture of that: e.g. hybrid RRF's MRR CI is [0.684, 0.958], a 27pp-wide
+  band. The two headline comparisons (BM25 vs. hybrid RRF; hybrid RRF vs.
+  +reranker) both clear p<0.05 on a paired bootstrap test even at this n,
+  so those two specific gaps are not noise — but that's a much narrower
+  claim than "every number in the results table is precise to three
+  decimal places," and a smaller gap between two untested pipeline pairs
+  should still be read as directional at best.
+- **One embedding model, one run of the underlying retrieval** (the
+  bootstrap resamples the *scored queries*, not the retrieval itself — it
+  quantifies "how much would this conclusion move if we'd sampled a
+  different 24 queries," not "how much would it move with a different
+  embedding model or a different day's API response").
 - **Synthetic corpus written to make the ablation legible** (clean
   one-section-one-chunk structure, deliberately paired lexical/paraphrase
-  queries) — real-world recall numbers on messy source documents will differ.
+  queries) — real-world recall numbers on messy source documents will
+  differ. `benchmarks/rag_recall_beir/` addresses this specific caveat
+  with a published, non-self-authored benchmark instead (BEIR NFCorpus,
+  323 real judged queries, graded relevance) — read that benchmark's own
+  RESULTS.md for what a much larger, externally-sourced n changes and
+  what it doesn't.
 - **What this benchmark is good evidence for**: hybrid retrieval measurably
   helps on queries that don't share vocabulary with their answer, and a
   term-overlap reranker can fight that benefit. **What it is not**: a

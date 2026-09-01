@@ -44,6 +44,7 @@ from .retrieval_metrics import (
 )
 from .concurrency_bench import ConcurrencyCase, ConcurrencyReport, benchmark
 from .similarity import average_pairwise_similarity, cosine_similarity
+from .stats import ConfidenceInterval, PairedTestResult, bootstrap_ci, paired_bootstrap_test
 
 __all__ = [
     "AgentOutcome",
@@ -86,4 +87,8 @@ __all__ = [
     "benchmark",
     "average_pairwise_similarity",
     "cosine_similarity",
+    "ConfidenceInterval",
+    "PairedTestResult",
+    "bootstrap_ci",
+    "paired_bootstrap_test",
 ]
