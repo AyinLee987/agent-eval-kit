@@ -26,6 +26,54 @@ expanding on for a resume/portfolio writeup.
       relative to plain RRF fusion because it re-weights toward lexical
       overlap. Read the caveats section before citing a number from it —
       n=24 is small, one embedding model, one run.
+- [x] **Statistical confidence for retrieval metrics.** Done — new
+      `agent_eval/stats.py` (`bootstrap_ci`, `paired_bootstrap_test`,
+      dependency-free bootstrap resampling, no scipy/numpy). Wired into
+      `benchmarks/rag_recall/run_benchmark.py`: every pipeline's MRR now
+      reports a 95% CI, and the two headline comparisons (BM25 vs. hybrid
+      RRF; hybrid RRF vs. +reranker) are paired-tested — both clear p<0.05
+      even at n=24. Reusable by any other benchmark's per-item scores, not
+      RAG-specific.
+- [x] **RAG recall on a published benchmark (BEIR NFCorpus).** Done — see
+      `benchmarks/rag_recall_beir/RESULTS.md`. Directly addresses
+      `benchmarks/rag_recall`'s "synthetic, self-authored corpus" caveat:
+      3,633 real biomedical documents, 323 real relevance-judged test
+      queries (graded 1/2, from the original 2016 BEIR release), fetched
+      once via `download_nfcorpus.py` (HuggingFace `datasets-server`, no
+      `datasets`/pandas dependency) into checked-in JSON. Same four-pipeline
+      ablation as the synthetic benchmark, same `agent_eval.stats` CI/
+      significance testing, ~13x the query count. Found real-corpus
+      documents split into several chunks each under the sibling repo's
+      `MedicalParentChildChunker` (avg 2.1 chunks/doc, vs. the synthetic
+      corpus's one-section-one-chunk-by-design) — `build_cases()` treats
+      every chunk of a relevant document as relevant, the correct ground
+      truth for document-level qrels split into passages. **Results (n=323):**
+      hybrid RRF vs. BM25-only replicates the synthetic benchmark's headline
+      finding (+11.9pp MRR, 0.448→0.567, p=0.000). Two findings that don't
+      carry over as cleanly: dense-only edges out hybrid RRF on MRR here
+      (0.577 vs. 0.567, though hybrid still wins Recall/nDCG — their CIs
+      overlap heavily, read as "roughly tied" not "dense wins"), and the
+      synthetic benchmark's significant reranker-hurts-MRR finding (p=0.007
+      at n=24) is directionally the same but no longer significant at n=323
+      (p=0.262) — a real, measured instance of "a small effect can need
+      more than 24 queries to separate from noise," not a contradiction.
+- [x] **LLM-as-reranker, on the `LLM_ReRanker` branch.** Done — see
+      `benchmarks/rag_recall_beir/RESULTS_llm_rerank.md`. New
+      `llm_reranker.py` wires `deepseek-chat` into the sibling repo's
+      existing `CallableReranker` adapter (no harness changes needed) --
+      one call per query, listwise-scores its up-to-30 fused RRF
+      candidates. First (zero-shot) prompt had a **41% degenerate-response
+      rate** (the model literally echoing `[json array of 30 numbers]`
+      instead of doing the task) -- fixed by rewriting the prompt as
+      one-shot (one full worked example instead of a one-line format
+      description): **0/323 failures** after. Result: LLM rerank tops
+      every pipeline on every metric, and clears paired-bootstrap
+      significance (p<0.05, mostly p<0.001) against hybrid RRF,
+      hybrid+HeuristicReranker, and dense-only on Recall@5/10 and
+      nDCG@5/10 -- the one metric that stays non-significant is MRR, same
+      "noisiest metric on this corpus" pattern as the rest of this
+      benchmark. Cost: ~2.2s/query, 6-12x slower than the local pipelines
+      -- a real latency tradeoff, not a free win.
 - [x] **Trajectory evaluation + cross-model LLM-judge.** Done — see
       `benchmarks/agent_trajectory/RESULTS.md` and
       `reports/agent-trajectory-evaluation.md`. Real `ReActAgent` (Bailian
