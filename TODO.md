@@ -100,6 +100,23 @@ expanding on for a resume/portfolio writeup.
       a pre-flight validation failure (unknown role) and a mid-run
       `FatalToolError` inside one Worker running concurrently with 5 normal
       ones left the other tasks unaffected (6/6 and 5/5 respectively).
+- [x] **Intervention ladder on long tool chains.** Done — see
+      `benchmarks/intervention_ladder/RESULTS.md` and
+      `reports/intervention-ladder-evaluation.md`. Six conditions (three
+      prompt variants on a flat 100-tool registry, three specialist-prompt
+      variants under the sibling repo's hierarchical routing) on 60
+      generated 8-step chains, k=3, unit of analysis = task, paired
+      bootstrap via `agent_eval.stats`. Headline: only worked examples
+      significantly improve exact tool-sequence match (+17.8pp, p=0.0066);
+      an abstract "never skip a step" rule takes step recall 0.838→0.972
+      but buys nothing on exact match (p=0.86) because unrequested calls
+      rise 185→393, and it drops final-answer accuracy 78.9%→49.4%. The
+      ablation is the real result: deleting one anti-skip sentence from the
+      shipped specialist prompt drops step recall to 0.867 (p=0.227, not
+      significant) — the hierarchical architecture's entire measured
+      benefit was that sentence, not the routing. Retires the sibling
+      repo's 57%→67% claim, which sits inside a baseline that swung 14pp
+      between two runs of an unchanged configuration.
 - [ ] **Context-compression ablation.** Run the same task set through
       `EvalHarness` with and without `ContextCompressor` wired into the
       agent; report avg tokens/task and success rate side by side to show
