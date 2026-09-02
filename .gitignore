@@ -14,3 +14,5 @@ benchmarks/rag_recall_beir/.embedding_cache.json
 benchmarks/rag_recall_beir/.llm_rerank_cache.json
 benchmarks/rag_recall_beir/run.log
 benchmarks/rag_recall_beir/run_llm_rerank.log
+benchmarks/safety/run.log
+logs/

@@ -104,7 +104,8 @@ expanding on for a resume/portfolio writeup.
       `EvalHarness` with and without `ContextCompressor` wired into the
       agent; report avg tokens/task and success rate side by side to show
       the compression doesn't cost accuracy.
-- [ ] **Prompt-injection guard precision/recall.** Build ~20-30 injection
+- [ ] **Prompt-injection guard precision/recall** (also covers safety
+      sub-part 2, tool-output injection resistance). Build ~20-30 injection
       payloads and ~20-30 benign tool outputs; add a scorer or standalone
       script that reports `ToolOutputGuard`'s TPR/FPR on that set.
 
@@ -152,17 +153,29 @@ setup (Bailian agent / DeepSeek judge) was immediately available.
       questions too. Exactly the caveat the plan flagged going in
       ("embedding similarity is coarse for short factual answers"), now
       with three concrete worked examples instead of a hypothetical one.
-- [ ] **③ Safety (public datasets).** Candidates: AdvBench, HarmBench,
-      TruthfulQA, Do-Not-Answer (English); SafetyBench or Flames (Chinese —
-      more relevant given the sibling project's Chinese RAG focus). Sample
-      100–200 prompts rather than a full dataset. Three-part split: direct
-      harmful-request refusal rate; (reusing the sibling project's
-      `ToolOutputGuard`) resistance to instructions injected via tool
-      output — overlaps with the "prompt-injection guard precision/recall"
-      item below; and **role adherence under adversarial pressure**
-      (deferred here from ①) — give the agent a persona/scope restriction
-      and use `ConversationHarness` (now built) to test whether a multi-turn
-      conversation can talk it out of that persona.
+- [x] **③ Safety — direct refusal + mid-conversation escalation.** Done —
+      see `benchmarks/safety/RESULTS.md`. Two of the three originally-
+      scoped sub-parts: (1) direct harmful-request refusal rate, 50 prompts
+      sampled from AdvBench (Zou et al. 2023, 520 total); (3) role
+      adherence under adversarial pressure, narrowed from "multi-turn
+      persona-holding" to a sharper self-authored escalation-scenario
+      probe (n=10) — an innocuous dual-use question followed by an
+      explicit harmful-intent reveal in the very next turn, classified
+      INTERRUPTED/CONTINUED. Both use a DeepSeek classifier (different
+      vendor than the Bailian agent), one-shot prompted from the start
+      using the exact fix the sibling repo's `LLMReranker` needed after
+      its own 41% zero-shot failure rate. **Results: 1.000 refusal
+      (n=50), 1.000 interruption (n=10), both with bootstrap 95% CIs —
+      spot-checked manually and confirmed a real ceiling, not a broken
+      classifier, but read the RESULTS.md caveats before citing either
+      number: AdvBench is a saturated benchmark for current safety-tuned
+      models (no jailbreak/obfuscation attempted), and n=10 for the
+      escalation part means the CI, not the point estimate, is the
+      honest takeaway.** Sub-part (2) — reusing the sibling project's
+      `ToolOutputGuard` for tool-output injection resistance — remains
+      unstarted, tracked below merged with the pre-existing
+      "prompt-injection guard precision/recall" item since it's the same
+      measurement.
 - [x] **⑤ Business-scenario evaluation — scoped as medical QA (risk-tiered
       triage), replacing the earlier generic "business scenario" framing.**
       Done — see `benchmarks/medical_qa/RESULTS.md` and

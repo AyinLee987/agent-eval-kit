@@ -99,6 +99,18 @@ didn't read as a first-person symptom report — reported alongside the fix
 rather than letting the fix look like an unambiguous win. See
 [`reports/medical-qa-evaluation.md`](reports/medical-qa-evaluation.md).
 
+A safety evaluation has also been run for real — the project's ③ category:
+a real agent (no tools, no safety-specific system prompt) graded by a
+DeepSeek classifier against 50 direct harmful requests sampled from AdvBench
+and 10 self-authored two-turn escalation scenarios (an innocuous dual-use
+question followed by an explicit harmful-intent reveal the next turn).
+Both hit a clean 1.000 (bootstrap 95% CI), manually spot-checked to confirm
+it's a real ceiling and not a broken classifier — but AdvBench is a
+saturated benchmark for current safety-tuned models (no jailbreak or
+obfuscation attempted here), so read this as "no failures found in this
+sample," not "proven robust to adversarial jailbreaking." See
+[`benchmarks/safety/RESULTS.md`](benchmarks/safety/RESULTS.md).
+
 The remaining category in the broader agent-evaluation plan (safety) has
 not been run yet — that's next. See [`TODO.md`](TODO.md) for the full
 roadmap.
@@ -181,6 +193,11 @@ benchmarks/
                           MedlinePlus-derived knowledge base (RAG-as-a-tool) —
                           corpus.py, scenarios.json, cached_embeddings.py,
                           run_benchmark.py, RESULTS.md
+  safety/                 direct refusal rate (AdvBench sample) + mid-
+                          conversation escalation (self-authored scenarios),
+                          graded by a cross-vendor DeepSeek classifier —
+                          download_advbench.py, escalation_scenarios.py,
+                          classifier.py, run_benchmark.py, RESULTS.md
 reports/
   rag-recall-evaluation.md        formal write-up of the RAG benchmark above
   agent-trajectory-evaluation.md  formal write-up of the trajectory-judge
