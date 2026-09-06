@@ -10,12 +10,16 @@ different agent with the same task set and scorers.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
-from numbers import Number
+from dataclasses import asdict, dataclass, field
+from os import PathLike
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 from .scoring import Scorer, Task
 from .types import AgentOutcome
+from .score_reporting import (
+    average, coverage_line, error_record, metric_summary, numeric,
+    score_outcome, validate_tasks, write_json_report,
+)
 
 TaskSet = Union[str, Sequence[Task]]
 
@@ -30,6 +34,9 @@ class TaskResult:
     task_id: str
     outcome: AgentOutcome
     scores: Dict[str, Any] = field(default_factory=dict)
+    metric_statuses: Dict[str, str] = field(default_factory=dict)
+    scorer_errors: List[Dict[str, str]] = field(default_factory=list)
+    execution_error: Optional[Dict[str, str]] = None
 
 
 @dataclass
@@ -52,18 +59,19 @@ class Scorecard:
     def aggregate(self) -> Dict[str, float]:
         """Return {metric_name: mean value} over every scored task."""
 
-        sums: Dict[str, float] = {}
-        counts: Dict[str, int] = {}
-        for result in self.results:
-            for key, value in result.scores.items():
-                if value is None:
-                    continue
-                numeric = float(value) if isinstance(value, (bool, Number)) else None
-                if numeric is None:
-                    continue
-                sums[key] = sums.get(key, 0.0) + numeric
-                counts[key] = counts.get(key, 0) + 1
-        return {key: sums[key] / counts[key] for key in sums if counts[key]}
+        return average((r.scores, r.metric_statuses) for r in self.results)
+
+    def metric_summary(self) -> Dict[str, dict]:
+        return metric_summary((r.scores, r.metric_statuses) for r in self.results)
+
+    def execution_summary(self) -> Dict[str, Any]:
+        errors = sum(r.execution_error is not None for r in self.results)
+        success = sum(r.execution_error is None and r.outcome.success for r in self.results)
+        return {"planned": self.total, "execution_errors": errors,
+                "agent_failed": self.total - errors - success, "successful": success,
+                "success_rate": success / self.total if self.total else None,
+                "scorer_errors": sum(e["stage"] == "score" for r in self.results for e in r.scorer_errors),
+                "unavailable_scorers": sum(e["stage"] != "score" for r in self.results for e in r.scorer_errors)}
 
     def judge_rule_agreement(self) -> Optional[float]:
         """Fraction of tasks where ``judge_pass`` and ``rule_pass`` agree.
@@ -75,7 +83,10 @@ class Scorecard:
         pairs = [
             (r.scores["rule_pass"], r.scores["judge_pass"])
             for r in self.results
-            if "rule_pass" in r.scores and "judge_pass" in r.scores
+            if isinstance(r.scores.get("rule_pass"), bool)
+            and isinstance(r.scores.get("judge_pass"), bool)
+            and r.metric_statuses.get("rule_pass", "valid") == "valid"
+            and r.metric_statuses.get("judge_pass", "valid") == "valid"
         ]
         if not pairs:
             return None
@@ -93,12 +104,13 @@ class Scorecard:
             row = f"{result.task_id:<22}"
             for key in agg:
                 value = result.scores.get(key)
-                cell = f"{'-':<10}" if value is None else f"{float(value):<10.2f}"
+                cell = f"{'-':<10}" if numeric(value) is None else f"{float(value):<10.2f}"
                 row += cell
             lines.append(row)
         lines.append("-" * 58)
-        for key, value in agg.items():
-            lines.append(f"avg {key}: {value:.2f}")
+        lines.append(f"Execution: {self.execution_summary()}")
+        for key, detail in self.metric_summary().items():
+            lines.append(coverage_line(key, detail))
         agreement = self.judge_rule_agreement()
         if agreement is not None:
             lines.append(f"judge/rule agreement: {agreement:.0%}")
@@ -106,25 +118,33 @@ class Scorecard:
         return "\n".join(lines)
 
     def dump(self, path: str) -> None:
-        """Write the full scorecard (per-task scores, no raw trajectories) to a JSON file."""
+        """Write versioned scores, normalized evidence and failure accounting."""
 
         payload = {
+            "schema_version": 2,
+            "scoring_version": 2,
             "aggregate": self.aggregate(),
+            "metric_summary": self.metric_summary(),
+            "execution_summary": self.execution_summary(),
             "judge_rule_agreement": self.judge_rule_agreement(),
             "results": [
                 {
                     "task_id": r.task_id,
                     "answer": r.outcome.answer,
+                    "success": r.outcome.success,
                     "stop_reason": r.outcome.stop_reason,
                     "steps": r.outcome.steps,
                     "tokens": r.outcome.tokens,
                     "scores": r.scores,
+                    "metric_statuses": r.metric_statuses,
+                    "scorer_errors": r.scorer_errors,
+                    "execution_error": r.execution_error,
+                    "trajectory": [asdict(step) for step in r.outcome.trajectory],
                 }
                 for r in self.results
             ],
         }
-        with open(path, "w", encoding="utf-8") as fh:
-            json.dump(payload, fh, indent=2, ensure_ascii=False)
+        write_json_report(path, payload)
 
 
 class EvalHarness:
@@ -156,22 +176,35 @@ class EvalHarness:
         self.run = run or (lambda agent, prompt: agent.run(prompt))
 
     def load_tasks(self) -> List[Task]:
-        if isinstance(self.tasks, str):
+        if isinstance(self.tasks, (str, PathLike)):
             with open(self.tasks, "r", encoding="utf-8") as fh:
-                return json.load(fh)
-        return list(self.tasks)
+                return validate_tasks(json.load(fh))
+        return validate_tasks(list(self.tasks))
 
     def run_all(self) -> Scorecard:
         results: List[TaskResult] = []
         for task in self.load_tasks():
-            agent = self.build_agent()
-            raw_result = self.run(agent, task["prompt"])
-            outcome = self.outcome_adapter(raw_result)
-
-            scores: Dict[str, Any] = {}
-            for scorer in self.scorers:
-                scores.update(scorer.score(task, outcome))
-
-            results.append(TaskResult(task_id=task["id"], outcome=outcome, scores=scores))
+            execution_error = None
+            stage = "build"
+            try:
+                agent = self.build_agent()
+                stage = "run"
+                raw_result = self.run(agent, task["prompt"])
+                stage = "adapt"
+                outcome = self.outcome_adapter(raw_result)
+                if not isinstance(outcome, AgentOutcome):
+                    raise TypeError("Adapter must return AgentOutcome.")
+            except Exception as exc:
+                execution_error = error_record(stage, exc)
+                outcome = AgentOutcome("", False, "execution_error", 0, 0)
+            scores, statuses, errors = score_outcome(
+                self.scorers, task, outcome,
+                unavailable="execution_error" if execution_error else None,
+            )
+            results.append(TaskResult(
+                task_id=task["id"], outcome=outcome, scores=scores,
+                metric_statuses=statuses, scorer_errors=errors,
+                execution_error=execution_error,
+            ))
 
         return Scorecard(results=results)

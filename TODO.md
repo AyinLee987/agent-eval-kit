@@ -13,7 +13,37 @@ expanding on for a resume/portfolio writeup.
 - [x] Minimal CLI (`python -m agent_eval run ...`)
 - [x] Self-contained baseline agent + adapter (zero deps, used by the test suite)
 - [x] Lazy adapter for the sibling `agent-harness-from-scratch` ReActAgent
-- [x] Unit tests for every module (21 tests, all passing)
+- [x] Offline unit and regression tests for the core modules (see current verification below).
+
+## Evaluation correctness — first batch (2026-09-05)
+
+- [x] Preserve batched tool calls and distinguish completion, answer correctness and tool contracts.
+- [x] Validate judge schemas and retain per-metric failure/applicability denominators.
+- [x] Isolate task/scorer failures and preserve dependent conversation turns as blocked records.
+- [x] Deduplicate retrieval rankings, retain query failures, and score NFCorpus document qrels.
+- [x] Wilson binary intervals and paired permutation tests with explicit assumptions.
+- [x] Version new scorecards; preserve historical v1 results pending re-evaluation.
+
+See [migration and validation notes](docs/phase1-evaluation-fixes.md).
+
+## Data and experiment workflow — second batch (2026-09-06)
+
+- [x] Add 1,600 attributed public examples with fixed development/test splits,
+      source hashes, overlap audits and offline GSM8K/HotpotQA scoring.
+- [x] Persist manifests, randomized paired schedules and per-trial outcomes.
+- [x] Isolate agent/scorer processes with deadlines; resume without silently
+      rerunning completed failures, and rescore saved evidence separately.
+- [x] Compare complete task/trial/group pairs with explicit missingness and cost.
+- [x] Provide blinded human review templates and calibration analysis; actual
+      human review and calibrated judge performance remain unmeasured.
+- [x] Repeat serial/parallel timing with fresh cases, quality/SLA checks and CIs.
+- [x] Package 0.2.0, CLI workflow, Windows/Linux offline CI configuration.
+- [ ] Run the frozen public tasks with final real-model configurations.
+- [ ] Collect human labels and assess judge calibration on held-out outputs.
+- [ ] Add A2A protocol and Skill selection/permission benchmarks after those
+      capabilities exist in the companion agent.
+
+See [implementation, usage and limits](docs/phase2-experiments-and-data.md).
 
 ## Next: turn the toolkit into actual resume-grade numbers
 
@@ -244,10 +274,10 @@ setup (Bailian agent / DeepSeek judge) was immediately available.
 - [ ] A second real-framework adapter (e.g. a LangChain agent) to prove the
       "framework-agnostic" claim against something other than an internal
       baseline.
-- [ ] CLI: judge-scorer wiring, a `retrieval` subcommand, a `concurrency`
-      subcommand.
-- [ ] Package it properly (`pyproject.toml`, versioned release) instead of
-      running from a checkout.
-- [ ] GitHub Actions CI (mirrors the sibling project's).
+- [x] CLI: configurable scorer factories and `concurrency`, plus experiment,
+      resume, rescore, compare, review-template and calibrate commands.
+- [ ] Standalone `retrieval` CLI subcommand (Python API and benchmark scripts exist).
+- [x] Package configuration (`pyproject.toml`, version 0.2.0); remote release pending.
+- [x] GitHub Actions offline CI configuration; remote run pending push.
 - [ ] Publish the benchmark results (numbers + methodology) in this README
       once the "Next" section above has real runs behind it.

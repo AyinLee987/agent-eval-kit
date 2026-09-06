@@ -2,24 +2,26 @@
   {
     "id": "add",
     "prompt": "calculate: 12 + 30",
-    "expect_substrings": ["42"],
-    "expect_tool": "calculator"
+    "expect_tool": "calculator",
+    "expect_number": 42
   },
   {
     "id": "multiply",
     "prompt": "calculate: 6 * 7",
-    "expect_substrings": ["42"],
-    "expect_tool": "calculator"
+    "expect_tool": "calculator",
+    "expect_number": 42
   },
   {
     "id": "divide",
     "prompt": "calculate: 84 / 2",
-    "expect_substrings": ["42"],
-    "expect_tool": "calculator"
+    "expect_tool": "calculator",
+    "expect_number": 42
   },
   {
     "id": "echo",
     "prompt": "hello evaluation harness",
-    "expect_substrings": ["hello evaluation harness"]
+    "expect_substrings": [
+      "hello evaluation harness"
+    ]
   }
 ]

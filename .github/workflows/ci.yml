@@ -1,0 +1,37 @@
+name: Offline tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11", "3.14"]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      BAILIAN_API_KEY: ""
+      OPENAI_API_KEY: ""
+      HF_HUB_OFFLINE: "1"
+      HF_DATASETS_OFFLINE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install package and test dependencies
+        run: python -m pip install -e ".[test]"
+      - name: Run offline regression suite
+        run: python -B -m pytest -q -p no:cacheprovider
+      - name: Verify installed CLI
+        run: agent-eval --help
+      - name: Run controlled offline benchmark
+        run: agent-eval concurrency --case-factory benchmarks.runtime_regression.cases:make_healthy_cases --workers 3 --repeats 3 --seed 0

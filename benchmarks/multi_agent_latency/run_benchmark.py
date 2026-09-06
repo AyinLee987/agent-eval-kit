@@ -1,70 +1,41 @@
-"""Multi-agent latency + failure-isolation benchmark.
+"""Optional live paired latency benchmark for MultiAgentOrchestrator.
 
-Measures the real wall-clock benefit of MultiAgentOrchestrator's concurrent
-Worker dispatch against a plain sequential loop of ReActAgent.run() calls —
-using real Bailian API calls, not synthetic time.sleep cases, since the
-whole point is that parallelism benefit comes from overlapping network wait
-time, which a synthetic delay can't demonstrate honestly.
-
-MultiAgentOrchestrator owns its own ThreadPoolExecutor, sized by
-RunBudget.max_parallel_tasks at construction time — so "how parallel" is
-controlled by that budget, not by anything this script wraps around it.
-spawn_subagent/wait_subagents are called directly (bypassing a real Leader
-LLM's own delegate-or-not decision) so this measures pure dispatch/wait
-infrastructure latency, not model decision variance.
-
-Also verifies, with real data, a specific claim the sibling repo's README
-makes: "a child fatal error terminates only that child." Two distinct
-failure shapes, because they exercise different code paths:
-  1. a pre-flight validation failure (an unknown Worker role) — rejected
-     before a task is even queued;
-  2. a mid-run fatal tool error inside an already-running Worker — the
-     concurrent-execution case the README's claim is actually about.
-
-Usage (from the evaluation/ repo root):
-
-    python benchmarks/multi_agent_latency/run_benchmark.py
+This explicitly uses real Bailian calls when main() is invoked; importing the
+module does not load .env, import the sibling runtime, or contact an API.
+Independent paired blocks randomize both mode and case order. Both modes
+include fresh worker construction and actual worker shutdown in batch time;
+quality grading is outside the timing boundary. Per-case times use wrapper
+observations, not the orchestrator's potentially earlier logical cancellation
+stamps. A wait deadline can request cooperative cancellation, but close() is
+still joined. This script cannot forcibly terminate an uncooperative thread.
 """
-
 from __future__ import annotations
 
+import argparse
 import json
 import os
+import random
 import sys
 import time
+from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Any, Dict, List
 
 EVAL_ROOT = Path(__file__).resolve().parents[2]
 HARNESS_REPO = Path(os.environ.get("AGENT_HARNESS_PATH", EVAL_ROOT.parent / "agent" / "agent-harness-from-scratch"))
 BENCHMARK_DIR = Path(__file__).resolve().parent
+if str(EVAL_ROOT) not in sys.path:
+    sys.path.insert(0, str(EVAL_ROOT))
 
-for path in (str(EVAL_ROOT), str(HARNESS_REPO), str(BENCHMARK_DIR)):
-    if path not in sys.path:
-        sys.path.insert(0, path)
-
-from dotenv import load_dotenv  # noqa: E402
-
-if not load_dotenv(dotenv_path=HARNESS_REPO / ".env"):
-    raise SystemExit(f"Could not find a .env file at {HARNESS_REPO / '.env'}.")
-
-from agent import (  # noqa: E402
-    AgentRegistry,
-    AgentSpec,
-    BailianLLM,
-    MultiAgentOrchestrator,
-    ReActAgent,
-    RecoverableToolError,
-    RunBudget,
-    ToolRegistry,
-)
-
-from tools import broken_tool, calculator, current_datetime, lookup_fact  # noqa: E402
+from adapters.react_agent_adapter import adapt
+from agent_eval.concurrency_bench import BatchMeasurement, CaseMeasurement, PairedTrial, summarize_trials
+from agent_eval.scoring import RuleScorer, ToolUsageScorer
 
 TASKS_PATH = BENCHMARK_DIR / "tasks.json"
 RESULTS_PATH = BENCHMARK_DIR / "results.json"
 PARALLELISM_LEVELS = (1, 2, 3, 6)
 WAIT_TIMEOUT_SECONDS = 120.0
+_RUNTIME_LOADED = False
 
 WORKER_SYSTEM_PROMPT = (
     "You are a Worker. Solve only the delegated task, using a tool only "
@@ -76,100 +47,226 @@ BROKEN_WORKER_SYSTEM_PROMPT = (
 )
 
 
+def _load_runtime() -> None:
+    global _RUNTIME_LOADED, AgentRegistry, AgentSpec, BailianLLM, MultiAgentOrchestrator
+    global ReActAgent, RecoverableToolError, RunBudget, ToolRegistry
+    global broken_tool, calculator, current_datetime, lookup_fact
+    if _RUNTIME_LOADED:
+        return
+    if str(HARNESS_REPO) not in sys.path:
+        sys.path.insert(0, str(HARNESS_REPO))
+    from agent import (AgentRegistry, AgentSpec, BailianLLM, MultiAgentOrchestrator,
+                       ReActAgent, RecoverableToolError, RunBudget, ToolRegistry)
+    from benchmarks.multi_agent_latency.tools import broken_tool, calculator, current_datetime, lookup_fact
+    _RUNTIME_LOADED = True
+
+
 def require_env(name: str) -> None:
     if not os.environ.get(name):
-        raise SystemExit(
-            f"Refusing to run: {name} is not set (checked {HARNESS_REPO / '.env'})."
-        )
+        raise SystemExit(f"Refusing to run: {name} is not set.")
 
 
 def load_tasks() -> List[Dict[str, Any]]:
-    with open(TASKS_PATH, "r", encoding="utf-8") as fh:
-        return json.load(fh)
+    return json.loads(TASKS_PATH.read_text(encoding="utf-8"))
 
 
-def build_worker_registry() -> AgentRegistry:
+def _new_worker(measurement=None, *, broken=False):
+    if measurement is not None:
+        measurement["started"] = time.perf_counter()
+    try:
+        worker = ReActAgent(
+            llm=BailianLLM(),
+            tools=ToolRegistry([broken_tool] if broken else [calculator, lookup_fact, current_datetime]),
+            system_prompt=BROKEN_WORKER_SYSTEM_PROMPT if broken else WORKER_SYSTEM_PROMPT,
+            max_steps=3 if broken else 6,
+            agent_name="broken-worker" if broken else "latency-worker",
+        )
+    except Exception as exc:
+        if measurement is not None:
+            measurement.update(finished=time.perf_counter(), error=f"{type(exc).__name__}: {exc}")
+        raise
+    if measurement is not None:
+        original_run = worker.run
+
+        def tracked_run(*args, **kwargs):
+            try:
+                result = original_run(*args, **kwargs)
+                measurement["result"] = result
+                return result
+            except Exception as exc:
+                measurement["error"] = f"{type(exc).__name__}: {exc}"
+                raise
+            finally:
+                measurement["finished"] = time.perf_counter()
+
+        worker.run = tracked_run
+    return worker
+
+
+def build_worker_registry(measurements=None, tasks=()):
     registry = AgentRegistry()
-    registry.register(
-        AgentSpec("worker", "General-purpose worker for latency benchmark tasks."),
-        lambda: ReActAgent(
-            llm=BailianLLM(),
-            tools=ToolRegistry([calculator, lookup_fact, current_datetime]),
-            system_prompt=WORKER_SYSTEM_PROMPT,
-            max_steps=6,
-            agent_name="latency-worker",
-        ),
-    )
-    registry.register(
-        AgentSpec("broken-worker", "Deliberately-broken worker; only for the isolation test."),
-        lambda: ReActAgent(
-            llm=BailianLLM(),
-            tools=ToolRegistry([broken_tool]),
-            system_prompt=BROKEN_WORKER_SYSTEM_PROMPT,
-            max_steps=3,
-            agent_name="broken-worker",
-        ),
-    )
+    registry.register(AgentSpec("worker", "General-purpose worker."), lambda: _new_worker())
+    registry.register(AgentSpec("broken-worker", "Controlled fatal worker."), lambda: _new_worker(broken=True))
+    for index, task in enumerate(tasks):
+        record = measurements[task["id"]]
+        registry.register(AgentSpec(f"case-{index}", "Independently measured worker."),
+                          lambda record=record: _new_worker(record))
     return registry
 
 
-def run_sequential_baseline(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
-    started = time.perf_counter()
-    outcomes = []
+def _quality(task, result):
+    outcome = adapt(result)
+    scores = {**RuleScorer().score(task, outcome), **ToolUsageScorer().score(task, outcome)}
+    answer = scores["answer_correct"]
+    if answer is None:
+        return None, scores
+    tools = [scores.get("used_expected_tool"), scores.get("tool_contract_pass")]
+    return bool(scores["run_completed"] and answer and all(value is not False for value in tools)), scores
+
+
+def _finish_records(tasks, observations, started, finished, logical_results=None):
+    records = []
     for task in tasks:
-        agent = ReActAgent(
-            llm=BailianLLM(),
-            tools=ToolRegistry([calculator, lookup_fact, current_datetime]),
-            system_prompt=WORKER_SYSTEM_PROMPT,
-            max_steps=6,
-            agent_name="latency-worker",
+        observed = observations[task["id"]]
+        began = observed.get("started", finished)
+        ended = observed.get("finished", finished)
+        result = observed.get("result")
+        logical = logical_results.get(task["id"]) if logical_results is not None else result
+        success = bool(result is not None and logical is not None and result.success and logical.success
+                       and result.stop_reason == "finished")
+        error = observed.get("error")
+        if not success and error is None:
+            error = getattr(logical, "error_type", None) or getattr(logical, "stop_reason", None) or "no completed worker result"
+        timed_out = bool(observed.get("wait_timed_out") or ended - started > WAIT_TIMEOUT_SECONDS
+                         or getattr(logical, "stop_reason", None) == "timed_out")
+        quality = None
+        scores = {}
+        quality_error = None
+        if success:
+            try:
+                quality, scores = _quality(task, result)
+            except Exception as exc:
+                quality_error = f"{type(exc).__name__}: {exc}"
+        record = CaseMeasurement(
+            name=task["id"], queue_seconds=max(0.0, began - started),
+            exec_seconds=max(0.0, ended - began), total_seconds=max(0.0, ended - started),
+            success=success, quality_pass=quality, error=error, timed_out=timed_out,
+            quality_error=quality_error, quality_requested=True,
         )
-        result = agent.run(task["prompt"])
-        outcomes.append(result.success)
-    elapsed = time.perf_counter() - started
+        records.append({**asdict(record), "scores": scores,
+                        "worker_started": "started" in observed,
+                        "task_id": observed.get("task_id")})
+    return records
+
+
+def _batch_payload(records, seconds, *, mode, max_workers=1):
     return {
-        "task_count": len(tasks),
-        "serial_seconds": elapsed,
-        "success_count": sum(outcomes),
+        "task_count": len(records), f"{mode}_seconds": seconds,
+        "success_count": sum(record["success"] for record in records),
+        "failure_count": sum(not record["success"] for record in records),
+        "max_parallel_tasks": max_workers,
+        "tasks": records,
+        "timing_boundary": "before registry/worker construction through actual worker and executor shutdown; quality excluded",
+        "timeout_mode": "observed_sla_and_cooperative_orchestrator_wait; no forced thread termination",
     }
 
 
+def run_sequential_baseline(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
+    _load_runtime()
+    observations = {task["id"]: {} for task in tasks}
+    started = time.perf_counter()
+    # Both arms include registry construction in their timed region.
+    registry = build_worker_registry(observations, tasks)
+    for index, task in enumerate(tasks):
+        try:
+            registry.create(f"case-{index}").run(task["prompt"])
+        except Exception as exc:
+            observations[task["id"]].setdefault("error", f"{type(exc).__name__}: {exc}")
+    finished = time.perf_counter()
+    records = _finish_records(tasks, observations, started, finished)
+    return _batch_payload(records, finished - started, mode="serial")
+
+
 def run_parallel_level(tasks: List[Dict[str, Any]], max_parallel_tasks: int) -> Dict[str, Any]:
-    registry = build_worker_registry()
-    budget = RunBudget(max_parallel_tasks=max_parallel_tasks, max_subagents=len(tasks) + 2)
+    _load_runtime()
+    observations = {task["id"]: {} for task in tasks}
+    logical_results = {}
+    started = time.perf_counter()
+    registry = build_worker_registry(observations, tasks)
+    budget = RunBudget(max_parallel_tasks=max_parallel_tasks, max_subagents=len(tasks) + 2,
+                       subagent_timeout_seconds=WAIT_TIMEOUT_SECONDS)
     with MultiAgentOrchestrator(registry, budget) as orchestrator:
         with orchestrator.leader_scope() as root_id:
-            started = time.perf_counter()
-            task_ids = [orchestrator.spawn_subagent("worker", t["prompt"]) for t in tasks]
-            orchestrator.wait_subagents([r["task_id"] for r in task_ids], timeout_seconds=WAIT_TIMEOUT_SECONDS)
-            elapsed = time.perf_counter() - started
+            ids = {}
+            for index, task in enumerate(tasks):
+                try:
+                    task_id = orchestrator.spawn_subagent(f"case-{index}", task["prompt"])["task_id"]
+                    ids[task["id"]] = task_id
+                    observations[task["id"]]["task_id"] = task_id
+                except Exception as exc:
+                    observations[task["id"]]["error"] = f"{type(exc).__name__}: {exc}"
+            if ids:
+                try:
+                    orchestrator.wait_subagents(list(ids.values()), timeout_seconds=WAIT_TIMEOUT_SECONDS)
+                except RecoverableToolError:
+                    # Scope close requests cooperative cancellation; the outer
+                    # context still joins every actual worker before timing ends.
+                    for name in ids:
+                        if "finished" not in observations[name]:
+                            observations[name]["wait_timed_out"] = True
+    finished = time.perf_counter()
+    by_id = {result.task_id: result for result in orchestrator.results_for_run(root_id)}
+    logical_results = {name: by_id.get(task_id) for name, task_id in ids.items()}
+    records = _finish_records(tasks, observations, started, finished, logical_results)
+    return _batch_payload(records, finished - started, mode="parallel", max_workers=max_parallel_tasks)
 
-            results = {r.task_id: r for r in orchestrator.results_for_run(root_id)}
-            snapshots = {s.task_id: s for s in orchestrator.tasks_for_run(root_id)}
 
-            per_task = []
-            for r in task_ids:
-                tid = r["task_id"]
-                snap = snapshots[tid]
-                result = results[tid]
-                per_task.append({
-                    "task_id": tid,
-                    "success": result.success,
-                    "queue_seconds": (snap.started_at - snap.created_at) if snap.started_at else None,
-                    "exec_seconds": (snap.finished_at - snap.started_at) if snap.finished_at and snap.started_at else None,
-                })
+def _as_batch(payload, mode):
+    keys = {item.name for item in fields(CaseMeasurement)}
+    records = tuple(CaseMeasurement(**{key: value for key, value in record.items() if key in keys})
+                    for record in payload["tasks"])
+    return BatchMeasurement(mode, payload[f"{mode}_seconds"], records)
 
+
+def run_paired_benchmark(tasks, *, parallelism_levels=PARALLELISM_LEVELS, repeats=3, seed=0):
+    if isinstance(repeats, bool) or not isinstance(repeats, int) or repeats < 1:
+        raise ValueError("repeats must be a positive integer")
+    levels = list(parallelism_levels)
+    if not levels or len(set(levels)) != len(levels) or any(type(level) is not int or level < 1 for level in levels):
+        raise ValueError("parallelism_levels must be unique positive integers")
+    if not tasks or len({task["id"] for task in tasks}) != len(tasks):
+        raise ValueError("tasks must have unique nonempty case identities")
+    rng = random.Random(seed)
+    pairs = {level: [] for level in levels}
+    detailed_pairs = {level: [] for level in levels}
+    schedule = []
+    for trial in range(repeats):
+        block_levels = levels[:]
+        rng.shuffle(block_levels)
+        schedule.append({"trial": trial, "levels": block_levels})
+        for level in block_levels:
+            ordered_tasks = list(tasks)
+            rng.shuffle(ordered_tasks)
+            order = ["serial", "parallel"]
+            rng.shuffle(order)
+            arms = {}
+            for mode in order:
+                arms[mode] = (run_sequential_baseline(ordered_tasks) if mode == "serial"
+                              else run_parallel_level(ordered_tasks, level))
+            pairs[level].append(PairedTrial(trial, tuple(order), tuple(task["id"] for task in ordered_tasks),
+                                           _as_batch(arms["serial"], "serial"), _as_batch(arms["parallel"], "parallel")))
+            detailed_pairs[level].append({"trial": trial, "order": order, **arms})
     return {
-        "max_parallel_tasks": max_parallel_tasks,
-        "task_count": len(tasks),
-        "parallel_seconds": elapsed,
-        "success_count": sum(1 for r in results.values() if r.success),
-        "failure_count": sum(1 for r in results.values() if not r.success),
-        "tasks": per_task,
+        "repeats": repeats, "seed": seed, "block_schedule": schedule,
+        "comparisons": [{**summarize_trials(pairs[level], max_workers=level, seed=seed).to_dict(),
+                         "detailed_pairs": detailed_pairs[level]} for level in levels],
+        "tasks": tasks,
+        "limitation": "Direct worker dispatch with live provider variance; no Leader decision or A2A/Skill evaluation. Missing quality contracts remain unassessed.",
     }
 
 
 def run_preflight_failure_isolation(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
+    _load_runtime()
     registry = build_worker_registry()
     budget = RunBudget(max_parallel_tasks=3, max_subagents=len(tasks) + 2)
     preflight_error = None
@@ -193,6 +290,7 @@ def run_preflight_failure_isolation(tasks: List[Dict[str, Any]]) -> Dict[str, An
 
 
 def run_midrun_fatal_isolation(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
+    _load_runtime()
     registry = build_worker_registry()
     normal_tasks = tasks[:-1]
     budget = RunBudget(max_parallel_tasks=3, max_subagents=len(tasks) + 2)
@@ -218,60 +316,29 @@ def run_midrun_fatal_isolation(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--out", type=Path, default=RESULTS_PATH)
+    parser.add_argument("--skip-isolation", action="store_true")
+    args = parser.parse_args()
+    from dotenv import load_dotenv
+    load_dotenv(dotenv_path=HARNESS_REPO / ".env")
     require_env("BAILIAN_API_KEY")
+    _load_runtime()
     tasks = load_tasks()
-
-    print(f"Agent model: Bailian (qwen-plus). {len(tasks)} independent tasks.\n")
-
-    print("Running sequential baseline (no orchestrator)...")
-    baseline = run_sequential_baseline(tasks)
-    print(f"  serial_seconds={baseline['serial_seconds']:.2f}  "
-          f"success={baseline['success_count']}/{baseline['task_count']}\n")
-
-    parallel_runs = []
-    for level in PARALLELISM_LEVELS:
-        print(f"Running orchestrated batch at max_parallel_tasks={level}...")
-        report = run_parallel_level(tasks, level)
-        speedup = baseline["serial_seconds"] / report["parallel_seconds"] if report["parallel_seconds"] else 0.0
-        report["speedup_vs_serial"] = speedup
-        parallel_runs.append(report)
-        print(f"  parallel_seconds={report['parallel_seconds']:.2f}  speedup={speedup:.2f}x  "
-              f"success={report['success_count']}/{report['task_count']}\n")
-
-    print("Running pre-flight failure-isolation test (unknown role)...")
-    preflight = run_preflight_failure_isolation(tasks)
-    print(f"  preflight_rejected={preflight['preflight_rejected']}  "
-          f"other_tasks_succeeded={preflight['other_tasks_succeeded']}/{preflight['other_tasks_total']}\n")
-
-    print("Running mid-run failure-isolation test (fatal tool error)...")
-    midrun = run_midrun_fatal_isolation(tasks)
-    print(f"  broken_task_success={midrun['broken_task_success']} "
-          f"error_type={midrun['broken_task_error_type']}  "
-          f"normal_tasks_succeeded={midrun['normal_tasks_succeeded']}/{midrun['normal_tasks_total']}\n")
-
-    print("=" * 58)
-    print("MULTI-AGENT LATENCY: orchestrated vs. sequential")
-    print("=" * 58)
-    print(f"{'mode':<28}{'seconds':<12}{'speedup':<10}{'ok'}")
-    print(f"{'sequential (baseline)':<28}{baseline['serial_seconds']:<12.2f}{'1.00x':<10}"
-          f"{baseline['success_count']}/{baseline['task_count']}")
-    for report in parallel_runs:
-        label = f"orchestrated (k={report['max_parallel_tasks']})"
-        print(f"{label:<28}{report['parallel_seconds']:<12.2f}"
-              f"{report['speedup_vs_serial']:.2f}x{'':<4}{report['success_count']}/{report['task_count']}")
-    print("=" * 58)
-
-    payload = {
-        "baseline": baseline,
-        "parallel_runs": parallel_runs,
-        "failure_isolation": {
-            "preflight_invalid_role": preflight,
-            "midrun_fatal_tool_error": midrun,
-        },
-    }
-    with open(RESULTS_PATH, "w", encoding="utf-8") as fh:
-        json.dump(payload, fh, indent=2, ensure_ascii=False)
-    print(f"\nFull results written to {RESULTS_PATH}")
+    payload = run_paired_benchmark(tasks, repeats=args.repeats, seed=args.seed)
+    if not args.skip_isolation:
+        payload["failure_isolation"] = {
+            "preflight_invalid_role": run_preflight_failure_isolation(tasks),
+            "midrun_fatal_tool_error": run_midrun_fatal_isolation(tasks),
+        }
+    args.out.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    for comparison in payload["comparisons"]:
+        print(f"workers={comparison['max_workers']}: raw speedup={comparison['speedup']:.2f}x; "
+              f"quality coverage={comparison['quality_coverage']}; "
+              f"quality speedup CI={comparison['speedup_ci'] or comparison['qualification_error']}")
+    print(f"Full paired results written to {args.out}")
 
 
 if __name__ == "__main__":

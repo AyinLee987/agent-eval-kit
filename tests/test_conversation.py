@@ -75,7 +75,9 @@ def test_history_is_threaded_across_turns():
     turns = scorecard.results[0].turn_records
     assert len(turns) == 2
     assert "teal" in turns[1].outcome.answer
-    assert turns[1].scores == {"rule_pass": True}
+    assert turns[1].scores == {
+        "run_completed": True, "answer_correct": True, "rule_pass": True,
+    }
 
 
 def test_each_conversation_gets_a_fresh_agent_and_history():

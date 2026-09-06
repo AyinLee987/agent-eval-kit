@@ -1,0 +1,15 @@
+{
+  "trials": 3,
+  "seed": 20260905,
+  "timeout_seconds": 30,
+  "score_timeout_seconds": 30,
+  "metadata": {
+    "purpose": "Offline infrastructure smoke check; two identical baselines do not measure agent improvement",
+    "model": "none",
+    "token_accounting": "bare baseline word-count proxy, not provider tokens"
+  },
+  "conditions": [
+    {"id": "bare_a", "agent": "adapters.bare_baseline:build_agent", "outcome_adapter": "adapters.bare_baseline:adapt"},
+    {"id": "bare_b", "agent": "adapters.bare_baseline:build_agent", "outcome_adapter": "adapters.bare_baseline:adapt"}
+  ]
+}

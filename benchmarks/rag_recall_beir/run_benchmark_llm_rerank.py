@@ -23,43 +23,39 @@ import time
 from pathlib import Path
 from typing import Dict, List
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from run_benchmark import (  # noqa: E402
-    K_VALUES,
-    build_cases,
-    build_pipelines,
-    build_repository_and_retrievers,
-    ingest_corpus,
-    load_json,
-    make_retrieve_fn,
-    report_chunking,
-)
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from agent import DeepSeekLLM, CallableReranker  # noqa: E402
-from agent.rag.pipeline import RAGConfig, RAGPipeline  # noqa: E402
-
-from agent_eval.retrieval_metrics import evaluate_retrieval  # noqa: E402
-from agent_eval.stats import bootstrap_ci, paired_bootstrap_test  # noqa: E402
-
-from llm_reranker import RerankCache, build_llm_rerank_scorer  # noqa: E402
-
 HERE = Path(__file__).resolve().parent
 RESULTS_PATH = HERE / "results_llm_rerank.json"
 RERANK_CACHE_PATH = HERE / ".llm_rerank_cache.json"
 
 
 def main() -> None:
+    eval_root = str(Path(__file__).resolve().parents[2])
+    if eval_root not in sys.path:
+        sys.path.insert(0, eval_root)
+    from benchmarks.rag_recall_beir.run_benchmark import (
+        K_VALUES, build_cases, build_pipelines, build_repository_and_retrievers,
+        document_coverage, ingest_corpus, initialize_environment, load_json,
+        make_retrieve_fn, report_chunking,
+    )
+
+    initialize_environment()
+    from agent import DeepSeekLLM, CallableReranker
+    from agent.rag.pipeline import RAGConfig, RAGPipeline
+    from agent_eval.retrieval_metrics import evaluate_retrieval
+    from agent_eval.stats import bootstrap_ci, paired_permutation_test
+    from benchmarks.rag_recall_beir.llm_reranker import RerankCache, build_llm_rerank_scorer
+
     corpus = load_json("corpus.json")
     queries = load_json("queries.json")
     qrels = load_json("qrels.json")
 
     repository, ingestion, bm25, dense, embeddings = build_repository_and_retrievers()
-    print(f"Ingesting {len(corpus)} documents (all embeddings cached -- no API calls)...")
+    print(f"Ingesting {len(corpus)} documents (cached embeddings reused when available)...")
     logical_id_to_chunk_ids = ingest_corpus(ingestion, corpus)
     report_chunking(logical_id_to_chunk_ids, corpus)
     cases = build_cases(queries, qrels, logical_id_to_chunk_ids)
-    print(f"Scored queries: {len(cases)}\n")
+    coverage = document_coverage(corpus, cases, logical_id_to_chunk_ids)
+    print(f"Retained queries: {len(cases)}\n")
 
     pipelines = build_pipelines(repository, bm25, dense)
 
@@ -82,22 +78,28 @@ def main() -> None:
     )
 
     summary: Dict[str, dict] = {}
-    mrr_per_query: Dict[str, List[float]] = {}
+    mrr_per_query: Dict[str, Dict[str, float]] = {}
     for name, pipeline in pipelines.items():
-        retrieve = make_retrieve_fn(pipeline)
+        retrieve = make_retrieve_fn(pipeline, logical_id_to_chunk_ids)
         started = time.perf_counter()
         overall = evaluate_retrieval(cases, retrieve, name=name, k_values=K_VALUES)
         elapsed = time.perf_counter() - started
-        print(overall.render() + f"  ({elapsed:.1f}s, {elapsed / len(cases) * 1000:.0f}ms/query)")
+        print(overall.render() + f"  ({elapsed:.1f}s, {elapsed / max(1, len(cases)) * 1000:.0f}ms/query)")
 
-        mrr_values = [row["mrr"] for row in overall.per_query]
-        mrr_per_query[name] = mrr_values
-        mrr_ci = bootstrap_ci(mrr_values, seed=0)
-        print(f"  mrr 95% CI: {mrr_ci.render()}")
+        mrr_values = [row["mrr"] for row in overall.per_query if row["status"] == "ok"]
+        mrr_per_query[name] = {
+            row["query_id"]: row["mrr"] for row in overall.per_query if row["status"] == "ok"
+        }
+        mrr_ci = bootstrap_ci(mrr_values, seed=0) if len(mrr_values) >= 2 else None
+        print(f"  mrr 95% CI: {mrr_ci.render() if mrr_ci else 'not applicable (n < 2)'}")
 
         summary[name] = {
             "overall": overall.average(),
-            "mrr_95ci": {"low": mrr_ci.low, "high": mrr_ci.high},
+            "counts": overall.counts(),
+            "per_query": overall.per_query,
+            "mrr_95ci": {"low": mrr_ci.low, "high": mrr_ci.high,
+                         "method": mrr_ci.method, "n": mrr_ci.n,
+                         "n_resamples": mrr_ci.n_resamples} if mrr_ci else None,
             "elapsed_seconds": elapsed,
         }
         print()
@@ -105,20 +107,44 @@ def main() -> None:
     print(f"llm_rerank parse failures (fell back to plain RRF order for that query): "
           f"{failure_counter[0]}/{len(cases)}")
 
-    print("\nPaired bootstrap significance (MRR, same queries both sides):")
+    print("\nPaired permutation significance (MRR, same queries both sides):")
     significance: Dict[str, dict] = {}
     pairs = (
         ("hybrid_rrf", "llm_rerank"),
         ("hybrid_rerank", "llm_rerank"),
     )
     for a_name, b_name in pairs:
-        test = paired_bootstrap_test(mrr_per_query[a_name], mrr_per_query[b_name], seed=0)
+        left, right = mrr_per_query[a_name], mrr_per_query[b_name]
+        paired_ids = [case.query_id for case in cases if case.query_id in left and case.query_id in right]
+        paired_key = f"{a_name}_vs_{b_name}"
+        pair_meta = {
+            "method": "paired_permutation", "paired_query_ids": paired_ids,
+            "paired_count": len(paired_ids),
+            "excluded_query_ids": [case.query_id for case in cases if case.query_id not in paired_ids],
+        }
+        if len(paired_ids) < 2:
+            significance[paired_key] = {
+                **pair_meta, "status": "not_applicable", "reason": "paired n < 2",
+            }
+            continue
+        test = paired_permutation_test(
+            [left[query_id] for query_id in paired_ids],
+            [right[query_id] for query_id in paired_ids], seed=0,
+        )
         print(f"  {a_name} -> {b_name}: {test.render()}")
-        significance[f"{a_name}_vs_{b_name}"] = {"mean_diff": test.mean_diff, "p_value": test.p_value}
+        significance[paired_key] = {
+            **pair_meta, "status": "ok", "mean_diff": test.mean_diff, "p_value": test.p_value,
+            "sampling_method": test.method, "n_resamples": test.n_resamples,
+        }
     summary["_significance"] = significance
     summary["_meta"] = {
         "n_documents": len(corpus),
         "n_queries": len(cases),
+        "scoring_version": 2, "level": "document",
+        "judgment_level": "document", "ndcg_gain": "linear",
+        "document_ranking": "first_occurrence_in_chunk_ranking",
+        "chunk_judgments": "not provided by NFCorpus; no chunk-level score is reported",
+        "coverage": coverage,
         "llm_rerank_model": getattr(rerank_llm, "model", "unknown"),
         "llm_rerank_parse_failures": failure_counter[0],
     }

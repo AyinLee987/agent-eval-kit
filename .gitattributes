@@ -1,0 +1,5 @@
+# Published data/license hashes must survive Windows checkouts unchanged.
+benchmarks/public_data/**/*.jsonl text eol=lf
+# Preserve upstream license endings too; the manifests hash their exact bytes.
+benchmarks/public_data/licenses/*.txt text eol=lf whitespace=-blank-at-eof
+benchmarks/public_data/prepare.py text eol=lf

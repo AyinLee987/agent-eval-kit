@@ -20,6 +20,7 @@ Usage (from the evaluation/ repo root):
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 from pathlib import Path
@@ -49,8 +50,8 @@ from agent import (  # noqa: E402
 )
 from agent.rag.models import MedicalQuery  # noqa: E402
 
-from agent_eval.retrieval_metrics import RetrievalCase, evaluate_retrieval  # noqa: E402
-from agent_eval.stats import bootstrap_ci, paired_bootstrap_test  # noqa: E402
+from agent_eval.retrieval_metrics import RetrievalCase, RetrievalReport, evaluate_retrieval  # noqa: E402
+from agent_eval.stats import bootstrap_ci, paired_permutation_test  # noqa: E402
 
 from cached_embeddings import CachedEmbeddingProvider  # noqa: E402
 from corpus import DOCUMENTS, render_markdown  # noqa: E402
@@ -184,67 +185,129 @@ def make_retrieve_fn(pipeline: RAGPipeline):
 #: The two comparisons RESULTS.md's headline claims actually rest on:
 #: "hybrid RRF beats BM25-only" and "the heuristic reranker hurts relative
 #: to plain RRF fusion". Every pipeline is run against the same fixed
-#: ``cases`` list in the same order, so their per_query rows line up
-#: index-for-index -- exactly what paired_bootstrap_test needs.
+#: cases are paired by stable query ID after failed observations are excluded.
 SIGNIFICANCE_PAIRS = (("bm25_only", "hybrid_rrf"), ("hybrid_rrf", "hybrid_rerank"))
 
 
+def finite_metric_by_query(report: RetrievalReport, key: str) -> Dict[str, float]:
+    """Select successful finite scores while preserving their query identities."""
+
+    scores: Dict[str, float] = {}
+    seen = set()
+    for row in report.per_query:
+        query_id = row["query_id"]
+        if query_id in seen:
+            raise ValueError(f"Duplicate query_id {query_id!r} in retrieval report.")
+        seen.add(query_id)
+        value = row.get(key)
+        if (row.get("status") == "ok" and not isinstance(value, bool)
+                and isinstance(value, (int, float)) and math.isfinite(value)):
+            scores[query_id] = float(value)
+    return scores
+
+
 def main() -> None:
+    query_ids = [str(case["id"]) for case in CASES]
+    if len(set(query_ids)) != len(query_ids):
+        raise ValueError("Synthetic query IDs must be unique.")
     repository, bm25, dense, embeddings = build_repository_and_retrievers()
     check_one_chunk_per_section(repository)
 
     cases = [
-        RetrievalCase(query=case["query"], relevant_ids=resolve_relevant_ids(case["fact"], repository))
+        RetrievalCase(
+            query=case["query"], query_id=str(case["id"]),
+            relevant_ids=resolve_relevant_ids(case["fact"], repository),
+        )
         for case in CASES
     ]
-    style_by_query = {case["query"]: case["style"] for case in CASES}
-
+    style_by_query_id = {str(case["id"]): case["style"] for case in CASES}
     pipelines = build_pipelines(repository, bm25, dense)
 
     summary: Dict[str, dict] = {}
-    mrr_per_query: Dict[str, List[float]] = {}
+    mrr_per_query: Dict[str, Dict[str, float]] = {}
     print(f"Corpus: {len(DOCUMENTS)} documents, {len(cases)} labeled queries.")
     print(f"Embedding model: {embeddings.model_id}  ({embeddings.stats()['cached_vectors']} vectors cached)\n")
 
     for name, pipeline in pipelines.items():
         retrieve = make_retrieve_fn(pipeline)
         overall = evaluate_retrieval(cases, retrieve, name=name, k_values=K_VALUES)
+        for row in overall.per_query:
+            row["style"] = style_by_query_id[row["query_id"]]
         print(overall.render())
 
-        mrr_values = [row["mrr"] for row in overall.per_query]
-        mrr_per_query[name] = mrr_values
-        mrr_ci = bootstrap_ci(mrr_values, seed=0)
-        print(f"  mrr 95% CI: {mrr_ci.render()}")
+        scores = finite_metric_by_query(overall, "mrr")
+        mrr_per_query[name] = scores
+        mrr_values = list(scores.values())
+        mrr_ci = bootstrap_ci(mrr_values, seed=0) if len(mrr_values) >= 2 else None
+        print(f"  mrr 95% CI: {mrr_ci.render() if mrr_ci else 'not applicable (n < 2)'}")
 
         by_style = {}
+        by_style_counts = {}
         for style in ("lexical", "paraphrase"):
-            subset = [c for c in cases if style_by_query[c.query] == style]
-            report = evaluate_retrieval(subset, retrieve, name=f"{name}:{style}", k_values=K_VALUES)
+            report = RetrievalReport(
+                name=f"{name}:{style}", k_values=overall.k_values,
+                per_query=[row for row in overall.per_query if row["style"] == style],
+            )
             by_style[style] = report.average()
+            by_style_counts[style] = report.counts()
             print("  " + report.render())
 
         summary[name] = {
             "overall": overall.average(),
+            "counts": overall.counts(),
+            "per_query": overall.per_query,
             "by_style": by_style,
-            "mrr_95ci": {"low": mrr_ci.low, "high": mrr_ci.high},
+            "by_style_counts": by_style_counts,
+            "mrr_95ci": {
+                "low": mrr_ci.low, "high": mrr_ci.high,
+                "n": mrr_ci.n, "method": mrr_ci.method,
+            } if mrr_ci else None,
         }
         print()
 
-    print("Paired bootstrap significance (MRR, same 24 queries both sides):")
+    print("Paired permutation significance (MRR, matched successful query IDs):")
     significance: Dict[str, dict] = {}
     for a_name, b_name in SIGNIFICANCE_PAIRS:
-        test = paired_bootstrap_test(mrr_per_query[a_name], mrr_per_query[b_name], seed=0)
+        left, right = mrr_per_query[a_name], mrr_per_query[b_name]
+        paired_ids = [
+            case.query_id for case in cases if case.query_id in left and case.query_id in right
+        ]
+        pair_key = f"{a_name}_vs_{b_name}"
+        pair_meta = {
+            "method": "paired_permutation", "paired_query_ids": paired_ids,
+            "paired_count": len(paired_ids),
+            "excluded_query_ids": [
+                case.query_id for case in cases if case.query_id not in paired_ids
+            ],
+        }
+        if len(paired_ids) < 2:
+            significance[pair_key] = {
+                **pair_meta, "status": "not_applicable", "reason": "paired n < 2",
+            }
+            continue
+        test = paired_permutation_test(
+            [left[query_id] for query_id in paired_ids],
+            [right[query_id] for query_id in paired_ids], seed=0,
+        )
         print(f"  {a_name} -> {b_name}: {test.render()}")
-        significance[f"{a_name}_vs_{b_name}"] = {
-            "mean_diff": test.mean_diff,
-            "p_value": test.p_value,
+        significance[pair_key] = {
+            **pair_meta, "status": "ok", "method": test.method,
+            "mean_diff": test.mean_diff, "p_value": test.p_value,
         }
     summary["_significance"] = significance
-    embeddings.flush()  # catch whatever's accumulated since the last periodic flush
+    summary["_meta"] = {
+        "scoring_version": 2, "level": "chunk", "ndcg_gain": "linear",
+        "judgment_source": "synthetic fact-substring matches to ingested child chunks",
+        "official_document_qrels": False,
+        "n_documents": len(DOCUMENTS), "n_queries": len(cases),
+        "query_styles": ["lexical", "paraphrase"],
+        "style_reports": "slices of the same per-query observations; no retrieval reruns",
+    }
+    embeddings.flush()
     print(
-        "\nRead p >= 0.05 as 'this benchmark's n=24 queries cannot rule out "
-        "resampling noise producing a gap this size' -- not as 'no real "
-        "difference exists'. See RESULTS.md's caveats section."
+        "\nThe paired permutation test conditions on matched successful queries "
+        "and assumes labels are exchangeable within each pair under the null. "
+        "Inspect query failure counts before interpreting its p-value."
     )
 
     with open(RESULTS_PATH, "w", encoding="utf-8") as fh:

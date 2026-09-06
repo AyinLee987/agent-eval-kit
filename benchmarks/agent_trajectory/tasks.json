@@ -1,43 +1,180 @@
 [
   {
     "id": "basic-multiply",
-    "prompt": "What is 23 times 17?",
-    "expect_substrings": ["391"],
-    "expect_tool": "calculator"
+    "prompt": "Use calculator to compute 23 times 17. Return only the final number.",
+    "expect_tool": "calculator",
+    "expect_number": 391,
+    "tool_contract": {
+      "required": [
+        {
+          "name": "calculator",
+          "max_calls": 1
+        }
+      ]
+    }
   },
   {
     "id": "stipend-total",
-    "prompt": "Our on-call stipend is a fixed amount per week. Look it up with lookup_fact using the key 'oncall_stipend_usd', then tell me the total for 3 such weeks in a quarter.",
-    "expect_substrings": ["600"]
+    "prompt": "Our on-call stipend is a fixed amount per week. Look it up with lookup_fact using the key 'oncall_stipend_usd', then tell me the total for 3 such weeks in a quarter. Use calculator on the value actually returned by lookup_fact. Return only the final number.",
+    "expect_number": 600,
+    "tool_contract": {
+      "required": [
+        {
+          "name": "lookup_fact",
+          "arguments": {
+            "key": "oncall_stipend_usd"
+          },
+          "max_calls": 1
+        },
+        {
+          "name": "calculator",
+          "max_calls": 1
+        }
+      ],
+      "order": [
+        [
+          "lookup_fact",
+          "calculator"
+        ]
+      ],
+      "dependencies": [
+        {
+          "source": "lookup_fact",
+          "target": "calculator",
+          "argument": "/expression",
+          "match": "contains"
+        }
+      ]
+    }
   },
   {
     "id": "sev1-doubled",
-    "prompt": "Look up how many minutes we have to acknowledge a SEV1 incident using lookup_fact with the key 'sev1_ack_minutes', then tell me what double that number is.",
-    "expect_substrings": ["30"]
+    "prompt": "Look up how many minutes we have to acknowledge a SEV1 incident using lookup_fact with the key 'sev1_ack_minutes', then tell me what double that number is. Use calculator on the value actually returned by lookup_fact. Return only the final number.",
+    "expect_number": 30,
+    "tool_contract": {
+      "required": [
+        {
+          "name": "lookup_fact",
+          "arguments": {
+            "key": "sev1_ack_minutes"
+          },
+          "max_calls": 1
+        },
+        {
+          "name": "calculator",
+          "max_calls": 1
+        }
+      ],
+      "order": [
+        [
+          "lookup_fact",
+          "calculator"
+        ]
+      ],
+      "dependencies": [
+        {
+          "source": "lookup_fact",
+          "target": "calculator",
+          "argument": "/expression",
+          "match": "contains"
+        }
+      ]
+    }
   },
   {
     "id": "capital-distractor",
-    "prompt": "What is the capital of France?",
-    "expect_substrings": ["paris"]
+    "prompt": "What is the capital of France? Answer directly without calling a tool.",
+    "expect_substrings": [
+      "paris"
+    ],
+    "tool_contract": {
+      "forbidden": [
+        "calculator",
+        "lookup_fact",
+        "current_datetime"
+      ]
+    }
   },
   {
     "id": "divide-by-zero",
-    "prompt": "What is 10 divided by 0?",
-    "expect_substrings": []
+    "prompt": "Try 10 divided by 0 using calculator, then explain the result. If division is undefined, explicitly say undefined.",
+    "expect_substrings": [
+      "undefined"
+    ],
+    "tool_contract": {
+      "required": [
+        {
+          "name": "calculator",
+          "successful": false,
+          "max_calls": 1
+        }
+      ],
+      "allow_errors": [
+        "calculator"
+      ]
+    }
   },
   {
     "id": "rate-limit-window",
-    "prompt": "Look up our standard API rate limit using lookup_fact with the key 'standard_rate_limit_rpm', then tell me how many requests that allows over a 10 minute window.",
-    "expect_substrings": ["600"]
+    "prompt": "Look up our standard API rate limit using lookup_fact with the key 'standard_rate_limit_rpm', then tell me how many requests that allows over a 10 minute window. Use calculator on the value actually returned by lookup_fact. Return only the final number.",
+    "expect_number": 600,
+    "tool_contract": {
+      "required": [
+        {
+          "name": "lookup_fact",
+          "arguments": {
+            "key": "standard_rate_limit_rpm"
+          },
+          "max_calls": 1
+        },
+        {
+          "name": "calculator",
+          "max_calls": 1
+        }
+      ],
+      "order": [
+        [
+          "lookup_fact",
+          "calculator"
+        ]
+      ],
+      "dependencies": [
+        {
+          "source": "lookup_fact",
+          "target": "calculator",
+          "argument": "/expression",
+          "match": "contains"
+        }
+      ]
+    }
   },
   {
     "id": "mixed-answerable",
-    "prompt": "What's 2 plus 2, and also, what's the weather like today?",
-    "expect_substrings": ["4"]
+    "prompt": "Use calculator for 2 plus 2. You have no weather source available. Return JSON with fields sum (the computed number) and weather (the string \"unavailable\").",
+    "expect_fields": {
+      "/sum": 4,
+      "/weather": "unavailable"
+    },
+    "tool_contract": {
+      "required": [
+        {
+          "name": "calculator",
+          "max_calls": 1
+        }
+      ]
+    }
   },
   {
     "id": "weekday-from-datetime",
     "prompt": "Look up the current date and time, then tell me what day of the week it is.",
-    "expect_substrings": []
+    "expect_substrings": [],
+    "tool_contract": {
+      "required": [
+        {
+          "name": "current_datetime",
+          "max_calls": 1
+        }
+      ]
+    }
   }
 ]

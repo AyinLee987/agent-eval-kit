@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "snapshot_id": "0fc3ac94dab2c0122a314520276bf3e4743d576f82f69da31a676169a52ffdb4",
+  "prepared_at": "2026-09-05T15:47:15.881532+00:00",
+  "preparation_script_sha256": "a4b76ba271b7ef7119377ef23f5eb8701726658917f8fd3e3383c1aeb7d21497",
+  "sampling": {
+    "seed": 20260905,
+    "dev_per_dataset": 400,
+    "test_per_dataset": 400,
+    "algorithm": "ascending SHA256(seed:dataset:local_split:source_id), one example per lexical/support family",
+    "test_selection_precedes_dev": true
+  },
+  "sources": [
+    {
+      "name": "gsm8k_train.jsonl",
+      "dataset": "gsm8k",
+      "url": "https://raw.githubusercontent.com/openai/grade-school-math/3101c7d5072418e28b9008a6636bde82a006892c/grade_school_math/data/train.jsonl",
+      "sha256": "17f347dc51477c50d4efb83959dbb7c56297aba886e5544ee2aaed3024813465",
+      "revision": "3101c7d5072418e28b9008a6636bde82a006892c",
+      "split": "train",
+      "license": "MIT",
+      "downloaded_at": "2026-09-05T15:32:33.282292+00:00",
+      "bytes": 4166206
+    },
+    {
+      "name": "gsm8k_test.jsonl",
+      "dataset": "gsm8k",
+      "url": "https://raw.githubusercontent.com/openai/grade-school-math/3101c7d5072418e28b9008a6636bde82a006892c/grade_school_math/data/test.jsonl",
+      "sha256": "3730d312f6e3440559ace48831e51066acaca737f6eabec99bccb9e4b3c39d14",
+      "revision": "3101c7d5072418e28b9008a6636bde82a006892c",
+      "split": "test",
+      "license": "MIT",
+      "downloaded_at": "2026-09-05T15:32:32.885532+00:00",
+      "bytes": 749738
+    },
+    {
+      "name": "gsm8k_LICENSE.txt",
+      "dataset": "gsm8k",
+      "url": "https://raw.githubusercontent.com/openai/grade-school-math/3101c7d5072418e28b9008a6636bde82a006892c/LICENSE",
+      "sha256": "86bbb73e855821d7c401912fd4bf82e34313e6e3b6fd6f909f2b6cc9e209a53b",
+      "revision": "3101c7d5072418e28b9008a6636bde82a006892c",
+      "license": "MIT",
+      "downloaded_at": "2026-09-05T15:32:32.866988+00:00",
+      "bytes": 1062
+    },
+    {
+      "name": "hotpotqa_validation.parquet",
+      "dataset": "hotpotqa",
+      "url": "https://huggingface.co/datasets/hotpotqa/hotpot_qa/resolve/1908d6afbbead072334abe2965f91bd2709910ab/distractor/validation-00000-of-00001.parquet",
+      "sha256": "c20b638ca82b21d04fe12e14ff417ad05153d4d215a65de54497fca4e972f7c6",
+      "revision": "1908d6afbbead072334abe2965f91bd2709910ab",
+      "split": "validation",
+      "license": "CC-BY-SA-4.0",
+      "upstream_release": "HotpotQA dev distractor v1",
+      "upstream_url": "https://curtis.ml.cmu.edu/datasets/hotpot/hotpot_dev_distractor_v1.json",
+      "mirror_reason": "Original CMU host timed out during preparation; revision-pinned official HotpotQA Hugging Face repository used.",
+      "downloaded_at": "2026-09-05T15:38:47.120656+00:00",
+      "bytes": 27452575
+    },
+    {
+      "name": "CC-BY-SA-4.0.txt",
+      "dataset": "hotpotqa",
+      "url": "https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt",
+      "sha256": "28a9529c7d0bb4dc51f4bf5c116a3d16ef247a052f7591466768ddf563fd1cf5",
+      "revision": "4.0 International",
+      "license": "CC-BY-SA-4.0",
+      "downloaded_at": "2026-09-05T15:32:32.623697+00:00",
+      "bytes": 20138
+    }
+  ],
+  "datasets": {
+    "gsm8k": {
+      "license": "MIT",
+      "homepage": "https://github.com/openai/grade-school-math",
+      "paper": "https://arxiv.org/abs/2110.14168",
+      "split_strategy": "dev sampled from upstream train; frozen test sampled from upstream test",
+      "family_rule": "number-masked NFKC/casefolded question wording",
+      "split_audit": {
+        "dev_pool_count": 7473,
+        "test_pool_count": 1319,
+        "examined_dev_exclusions": {},
+        "overlapping_family_count": 0,
+        "overlapping_masked_question_count": 0,
+        "overlapping_context_title_count": 0
+      },
+      "source_count": {
+        "train": 7473,
+        "test": 1319
+      },
+      "rejected_source_records": {}
+    },
+    "hotpotqa": {
+      "license": "CC-BY-SA-4.0",
+      "homepage": "https://hotpotqa.github.io/",
+      "paper": "https://arxiv.org/abs/1809.09600",
+      "split_strategy": "both local splits sampled from the official dev distractor split; this is NOT the official hidden test",
+      "family_rule": "supporting-title set, plus no shared context title or number-masked question between published splits",
+      "split_audit": {
+        "dev_pool_count": 7404,
+        "test_pool_count": 7404,
+        "examined_dev_exclusions": {
+          "shared_test_context_title": 40,
+          "shared_source_id": 19
+        },
+        "overlapping_family_count": 0,
+        "overlapping_masked_question_count": 0,
+        "overlapping_context_title_count": 0
+      },
+      "source_count": {
+        "validation": 7405
+      },
+      "rejected_source_records": {
+        "support_outside_provided_context": 1
+      }
+    }
+  },
+  "files": {
+    "gsm8k/dev.jsonl": {
+      "path": "gsm8k/dev.jsonl",
+      "count": 400,
+      "bytes": 368893,
+      "sha256": "4b1c5c0d2a3c0003eeecb30b2945c3d35091c95088cba9e60296f1d5d8256bb7",
+      "source_splits": {
+        "train": 400
+      },
+      "task_types": {
+        "numeric_reasoning": 400
+      }
+    },
+    "gsm8k/test.jsonl": {
+      "path": "gsm8k/test.jsonl",
+      "count": 400,
+      "bytes": 368030,
+      "sha256": "ac8c62d9e379b2102e77b8e2d3bd89172e1e8e7e71ffb9b821534a622fdca10c",
+      "source_splits": {
+        "test": 400
+      },
+      "task_types": {
+        "numeric_reasoning": 400
+      }
+    },
+    "hotpotqa/dev.jsonl": {
+      "path": "hotpotqa/dev.jsonl",
+      "count": 400,
+      "bytes": 2692266,
+      "sha256": "b12bab41a1f20108ff36f09bec2756b801c2500b06d69bd4cbb465359a0c81cf",
+      "source_splits": {
+        "validation": 400
+      },
+      "task_types": {
+        "bridge": 326,
+        "comparison": 74
+      }
+    },
+    "hotpotqa/test.jsonl": {
+      "path": "hotpotqa/test.jsonl",
+      "count": 400,
+      "bytes": 2645805,
+      "sha256": "1773d8f956951a2a1907839b08ee5208bf269f480fc7c30f922f8a68716ae79f",
+      "source_splits": {
+        "validation": 400
+      },
+      "task_types": {
+        "bridge": 326,
+        "comparison": 74
+      }
+    }
+  },
+  "limitations": [
+    "These are public benchmarks and may already be present in model pretraining.",
+    "Lexical family detection does not certify absence of arbitrary semantic paraphrases.",
+    "HotpotQA local frozen test is drawn from public official dev, not the official hidden test.",
+    "No model was run to select examples; no accuracy or performance claim follows from preparation."
+  ],
+  "license_files": {
+    "licenses/GSM8K-MIT.txt": "86bbb73e855821d7c401912fd4bf82e34313e6e3b6fd6f909f2b6cc9e209a53b",
+    "licenses/HOTPOTQA-CC-BY-SA-4.0.txt": "28a9529c7d0bb4dc51f4bf5c116a3d16ef247a052f7591466768ddf563fd1cf5"
+  }
+}

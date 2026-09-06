@@ -18,6 +18,8 @@ from .scoring import (
 )
 from .conversation_scoring import ConversationJudgeScorer, ConversationScorer
 from .judge import (
+    JudgeValidationError,
+    validate_judge_result,
     build_answer_relevancy_judge_fn,
     build_answer_relevancy_prompt,
     build_conversation_judge_fn,
@@ -44,7 +46,10 @@ from .retrieval_metrics import (
 )
 from .concurrency_bench import ConcurrencyCase, ConcurrencyReport, benchmark
 from .similarity import average_pairwise_similarity, cosine_similarity
-from .stats import ConfidenceInterval, PairedTestResult, bootstrap_ci, paired_bootstrap_test
+from .stats import (
+    ConfidenceInterval, PairedTestResult, bootstrap_ci, paired_bootstrap_test,
+    paired_permutation_test, wilson_ci,
+)
 
 __all__ = [
     "AgentOutcome",
@@ -61,6 +66,8 @@ __all__ = [
     "TrajectoryJudgeScorer",
     "ConversationJudgeScorer",
     "ConversationScorer",
+    "JudgeValidationError",
+    "validate_judge_result",
     "build_answer_relevancy_judge_fn",
     "build_answer_relevancy_prompt",
     "build_conversation_judge_fn",
@@ -91,4 +98,6 @@ __all__ = [
     "PairedTestResult",
     "bootstrap_ci",
     "paired_bootstrap_test",
+    "paired_permutation_test",
+    "wilson_ci",
 ]

@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "name": "gsm8k_train.jsonl",
+      "dataset": "gsm8k",
+      "url": "https://raw.githubusercontent.com/openai/grade-school-math/3101c7d5072418e28b9008a6636bde82a006892c/grade_school_math/data/train.jsonl",
+      "sha256": "17f347dc51477c50d4efb83959dbb7c56297aba886e5544ee2aaed3024813465",
+      "revision": "3101c7d5072418e28b9008a6636bde82a006892c",
+      "split": "train",
+      "license": "MIT"
+    },
+    {
+      "name": "gsm8k_test.jsonl",
+      "dataset": "gsm8k",
+      "url": "https://raw.githubusercontent.com/openai/grade-school-math/3101c7d5072418e28b9008a6636bde82a006892c/grade_school_math/data/test.jsonl",
+      "sha256": "3730d312f6e3440559ace48831e51066acaca737f6eabec99bccb9e4b3c39d14",
+      "revision": "3101c7d5072418e28b9008a6636bde82a006892c",
+      "split": "test",
+      "license": "MIT"
+    },
+    {
+      "name": "gsm8k_LICENSE.txt",
+      "dataset": "gsm8k",
+      "url": "https://raw.githubusercontent.com/openai/grade-school-math/3101c7d5072418e28b9008a6636bde82a006892c/LICENSE",
+      "sha256": "86bbb73e855821d7c401912fd4bf82e34313e6e3b6fd6f909f2b6cc9e209a53b",
+      "revision": "3101c7d5072418e28b9008a6636bde82a006892c",
+      "license": "MIT"
+    },
+    {
+      "name": "hotpotqa_validation.parquet",
+      "dataset": "hotpotqa",
+      "url": "https://huggingface.co/datasets/hotpotqa/hotpot_qa/resolve/1908d6afbbead072334abe2965f91bd2709910ab/distractor/validation-00000-of-00001.parquet",
+      "sha256": "c20b638ca82b21d04fe12e14ff417ad05153d4d215a65de54497fca4e972f7c6",
+      "revision": "1908d6afbbead072334abe2965f91bd2709910ab",
+      "split": "validation",
+      "license": "CC-BY-SA-4.0",
+      "upstream_release": "HotpotQA dev distractor v1",
+      "upstream_url": "https://curtis.ml.cmu.edu/datasets/hotpot/hotpot_dev_distractor_v1.json",
+      "mirror_reason": "Original CMU host timed out during preparation; revision-pinned official HotpotQA Hugging Face repository used."
+    },
+    {
+      "name": "CC-BY-SA-4.0.txt",
+      "dataset": "hotpotqa",
+      "url": "https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt",
+      "sha256": "28a9529c7d0bb4dc51f4bf5c116a3d16ef247a052f7591466768ddf563fd1cf5",
+      "revision": "4.0 International",
+      "license": "CC-BY-SA-4.0"
+    }
+  ]
+}

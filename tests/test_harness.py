@@ -58,4 +58,6 @@ def test_inline_task_list_bypasses_the_json_file():
     )
     scorecard = harness.run_all()
     assert scorecard.total == 1
-    assert scorecard.results[0].scores == {"rule_pass": True}
+    assert scorecard.results[0].scores == {
+        "run_completed": True, "answer_correct": True, "rule_pass": True,
+    }

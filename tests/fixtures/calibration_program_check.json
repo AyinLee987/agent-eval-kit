@@ -1,0 +1,190 @@
+{
+  "description": "Deterministic arithmetic and schema program checks; no human labels or human calibration.",
+  "gold_document": {
+    "schema_version": 1,
+    "document_type": "judge_calibration_reference",
+    "source_kind": "synthetic_program_check",
+    "dataset_fingerprint": "synthetic-calibration-fixture-v1",
+    "dimensions": {
+      "quality": {
+        "kind": "numeric",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "pass": {
+        "kind": "binary"
+      },
+      "category": {
+        "kind": "categorical",
+        "labels": [
+          "low",
+          "high"
+        ]
+      }
+    },
+    "items": [
+      {
+        "condition": "fixture",
+        "task_id": "synthetic-0",
+        "trial_id": 0,
+        "task_fingerprint": "synthetic-task-0",
+        "reference_scores": {
+          "quality": 1,
+          "pass": 1,
+          "category": "high"
+        },
+        "human_reviewed": false,
+        "reviewer": null,
+        "notes": "Synthetic deterministic fixture; not human gold.",
+        "output_fingerprint": "4437d97735cff251ee6d0de29a107022ff32920712019e50b7c533dd4b024b7b"
+      },
+      {
+        "condition": "fixture",
+        "task_id": "synthetic-1",
+        "trial_id": 0,
+        "task_fingerprint": "synthetic-task-1",
+        "reference_scores": {
+          "quality": 0.75,
+          "pass": 1,
+          "category": "high"
+        },
+        "human_reviewed": false,
+        "reviewer": null,
+        "notes": "Synthetic deterministic fixture; not human gold.",
+        "output_fingerprint": "4437d97735cff251ee6d0de29a107022ff32920712019e50b7c533dd4b024b7b"
+      },
+      {
+        "condition": "fixture",
+        "task_id": "synthetic-2",
+        "trial_id": 0,
+        "task_fingerprint": "synthetic-task-2",
+        "reference_scores": {
+          "quality": 0.25,
+          "pass": 0,
+          "category": "low"
+        },
+        "human_reviewed": false,
+        "reviewer": null,
+        "notes": "Synthetic deterministic fixture; not human gold.",
+        "output_fingerprint": "4437d97735cff251ee6d0de29a107022ff32920712019e50b7c533dd4b024b7b"
+      },
+      {
+        "condition": "fixture",
+        "task_id": "synthetic-3",
+        "trial_id": 0,
+        "task_fingerprint": "synthetic-task-3",
+        "reference_scores": {
+          "quality": 0,
+          "pass": 0,
+          "category": "low"
+        },
+        "human_reviewed": false,
+        "reviewer": null,
+        "notes": "Synthetic deterministic fixture; not human gold.",
+        "output_fingerprint": "4437d97735cff251ee6d0de29a107022ff32920712019e50b7c533dd4b024b7b"
+      }
+    ]
+  },
+  "judge_records": [
+    {
+      "condition": "fixture",
+      "task_id": "synthetic-0",
+      "trial_id": 0,
+      "task_fingerprint": "synthetic-task-0",
+      "dataset_fingerprint": "synthetic-calibration-fixture-v1",
+      "status": "completed",
+      "outcome": {
+        "answer": "synthetic output",
+        "success": true,
+        "tokens": 0
+      },
+      "scores": {
+        "quality": 1,
+        "pass": 1,
+        "category": "high"
+      },
+      "metric_statuses": {
+        "quality": "valid",
+        "pass": "valid",
+        "category": "valid"
+      }
+    },
+    {
+      "condition": "fixture",
+      "task_id": "synthetic-1",
+      "trial_id": 0,
+      "task_fingerprint": "synthetic-task-1",
+      "dataset_fingerprint": "synthetic-calibration-fixture-v1",
+      "status": "completed",
+      "outcome": {
+        "answer": "synthetic output",
+        "success": true,
+        "tokens": 0
+      },
+      "scores": {
+        "quality": 0.5,
+        "pass": 0,
+        "category": "low"
+      },
+      "metric_statuses": {
+        "quality": "valid",
+        "pass": "valid",
+        "category": "valid"
+      }
+    },
+    {
+      "condition": "fixture",
+      "task_id": "synthetic-2",
+      "trial_id": 0,
+      "task_fingerprint": "synthetic-task-2",
+      "dataset_fingerprint": "synthetic-calibration-fixture-v1",
+      "status": "completed",
+      "outcome": {
+        "answer": "synthetic output",
+        "success": true,
+        "tokens": 0
+      },
+      "scores": {
+        "quality": 0.5,
+        "pass": 1,
+        "category": "high"
+      },
+      "metric_statuses": {
+        "quality": "valid",
+        "pass": "valid",
+        "category": "valid"
+      }
+    },
+    {
+      "condition": "fixture",
+      "task_id": "synthetic-3",
+      "trial_id": 0,
+      "task_fingerprint": "synthetic-task-3",
+      "dataset_fingerprint": "synthetic-calibration-fixture-v1",
+      "status": "completed",
+      "outcome": {
+        "answer": "synthetic output",
+        "success": true,
+        "tokens": 0
+      },
+      "scores": {
+        "quality": 0,
+        "pass": 0,
+        "category": "low"
+      },
+      "metric_statuses": {
+        "quality": "valid",
+        "pass": "valid",
+        "category": "valid"
+      }
+    }
+  ],
+  "expected": {
+    "quality_mae": 0.125,
+    "quality_agreement": 0.5,
+    "pass_mae": 0.5,
+    "pass_agreement": 0.5,
+    "pass_kappa": 0,
+    "category_kappa": 0
+  }
+}

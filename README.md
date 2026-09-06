@@ -12,6 +12,40 @@ see [Design notes](#design-notes).
 
 ## Status
 
+**Agent design cases and local tracing.** Added 50 scenario specifications
+(10 each for recovery, state/idempotency, budgets, context, and multi-agent/A2A),
+plus incremental trace files, synchronous ReAct instrumentation and a portable
+HTML viewer. The first baseline run completed 29 live DeepSeek V4 Flash cases
+and 8 controlled real-runtime cases: 26 mechanism passes, 8 failures and 3
+unassessed after offline oracle corrections. Thirteen specifications remain
+unsupported, including all 10 A2A protocol cases. Each executed case has a full
+local trace; this is one trial, not an architecture ablation. The latest full
+repair snapshot recorded 31 passes, 3 failures and 3 unassessed cases; later
+budget-only verification is reported separately. See [the case catalog](benchmarks/agent_design/CASES.md),
+[scope, commands and trace coverage](docs/agent-design-cases-and-tracing.md),
+and [the repair results and remaining failures](docs/agent-design-repair-results.md).
+
+**Second batch: reproducible experiments and 1,600 public examples.** Added
+GSM8K and HotpotQA development/frozen holdout splits (400 + 400 each), with
+pinned sources, licenses, split-overlap audits and deterministic offline
+scorers. Durable experiments now support repeated randomized conditions,
+per-trial checkpoints, process timeouts, resume, rescore, paired comparisons,
+human-review templates and quality-aware repeated concurrency benchmarks.
+See [the setup, commands and limitations](docs/phase2-experiments-and-data.md)
+and [dataset provenance](benchmarks/public_data/DATASET_CARD.md).
+The package is versioned as 0.2.0 with an `agent-eval` entry point and offline
+CI configuration. These changes do not introduce new real-model performance
+claims or human-calibrated judge results.
+
+**Scoring v2:** the first evaluation-correctness pass now preserves every tool
+call, validates judge output, reports missing-score denominators, separates
+answer correctness from completion, and fixes retrieval/statistical edge cases.
+See [the migration and validation notes](docs/phase1-evaluation-fixes.md).
+Benchmark numbers already checked into this repository are historical v1
+observations; they have not been recomputed with the new scoring definitions.
+In particular, old bootstrap significance claims and chunk-level NFCorpus
+numbers must be re-evaluated before comparison with v2 results.
+
 **Early / light version.** The core toolkit (types, scorers, harness, retrieval
 metrics, concurrency benchmark, a minimal CLI) is implemented and tested
 against a self-contained baseline agent.
@@ -111,9 +145,7 @@ obfuscation attempted here), so read this as "no failures found in this
 sample," not "proven robust to adversarial jailbreaking." See
 [`benchmarks/safety/RESULTS.md`](benchmarks/safety/RESULTS.md).
 
-The remaining category in the broader agent-evaluation plan (safety) has
-not been run yet — that's next. See [`TODO.md`](TODO.md) for the full
-roadmap.
+See [`TODO.md`](TODO.md) for the remaining evaluation roadmap.
 
 ## Why this exists
 
@@ -305,4 +337,6 @@ second real framework, not just an internal baseline.
 
 ## License
 
-MIT
+Project code is MIT licensed. Third-party benchmark data retains its own
+terms; see the [GSM8K/HotpotQA data card](benchmarks/public_data/DATASET_CARD.md)
+and [NFCorpus source and terms](benchmarks/rag_recall_beir/DATASET_CARD.md).

@@ -23,37 +23,37 @@ def _outcome(**overrides) -> AgentOutcome:
 
 def test_rule_scorer_passes_on_matching_substring_and_clean_finish():
     task = {"expect_substrings": ["42"]}
-    assert RuleScorer().score(task, _outcome()) == {"rule_pass": True}
+    assert RuleScorer().score(task, _outcome()) == {"run_completed": True, "answer_correct": True, "rule_pass": True}
 
 
 def test_rule_scorer_fails_when_force_stopped_even_with_right_substring():
     task = {"expect_substrings": ["42"]}
     outcome = _outcome(stop_reason="max_steps")
-    assert RuleScorer().score(task, outcome) == {"rule_pass": False}
+    assert RuleScorer().score(task, outcome) == {"run_completed": False, "answer_correct": True, "rule_pass": False}
 
 
 def test_rule_scorer_fails_on_missing_substring():
     task = {"expect_substrings": ["99"]}
-    assert RuleScorer().score(task, _outcome()) == {"rule_pass": False}
+    assert RuleScorer().score(task, _outcome()) == {"run_completed": True, "answer_correct": False, "rule_pass": False}
 
 
 def test_tool_usage_scorer_is_none_when_task_declares_no_expected_tool():
-    assert ToolUsageScorer().score({}, _outcome()) == {"used_expected_tool": None}
+    assert ToolUsageScorer().score({}, _outcome()) == {"used_expected_tool": None, "tool_contract_pass": None}
 
 
 def test_tool_usage_scorer_detects_expected_tool():
     task = {"expect_tool": "calculator"}
-    assert ToolUsageScorer().score(task, _outcome()) == {"used_expected_tool": True}
+    assert ToolUsageScorer().score(task, _outcome()) == {"used_expected_tool": True, "tool_contract_pass": None}
 
 
 def test_tool_usage_scorer_flags_missing_expected_tool():
     task = {"expect_tool": "web_search"}
-    assert ToolUsageScorer().score(task, _outcome()) == {"used_expected_tool": False}
+    assert ToolUsageScorer().score(task, _outcome()) == {"used_expected_tool": False, "tool_contract_pass": None}
 
 
 def test_trajectory_scorer_averages_three_signals():
     task = {"expect_tool": "calculator"}
-    assert TrajectoryScorer().score(task, _outcome()) == {"trajectory_score": 1.0}
+    assert TrajectoryScorer().score(task, _outcome()) == {"trajectory_score": 1.0, "tool_error_free": True, "tool_recovery_pass": None}
 
 
 def test_trajectory_scorer_penalizes_tool_errors_even_if_answer_looks_right():

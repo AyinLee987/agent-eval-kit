@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-eval-kit"
+version = "0.2.0"
+description = "Framework-agnostic agent evaluation with auditable scoring and repeated experiments"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "Li Zhuoyang"}]
+dependencies = []
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Operating System :: OS Independent",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0", "build>=1.2", "setuptools>=77", "wheel"]
+
+[project.scripts]
+agent-eval = "agent_eval.cli:main"
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agent_eval*", "adapters*", "benchmarks*"]
+exclude = ["benchmarks.public_data.raw*", "benchmarks.public_data.prepared*", "benchmarks.public_data.cache*"]
+namespaces = true
+
+# Small fixture declarations are distributed explicitly. Downloaded public
+# datasets, embedding caches, result JSON and logs are repository-only artifacts.
+# Optional live benchmark dependencies and the sibling agent runtime are not
+# installed by the core package or the offline test extra.
+[tool.setuptools.package-data]
+benchmarks = ["tasks.json"]
+"benchmarks.agent_trajectory" = ["tasks.json"]
+"benchmarks.conversational" = ["conversations.json"]
+"benchmarks.intervention_ladder" = ["tasks_8step.json"]
+"benchmarks.medical_qa" = ["scenarios.json"]
+"benchmarks.multi_agent_latency" = ["tasks.json"]
+"benchmarks.public_data" = ["manifest.json", "source_lock.json", "DATASET_CARD.md"]
+"benchmarks.runtime_regression" = ["cases.json"]
+"benchmarks.agent_design" = ["cases.json", "CASES.md"]

@@ -1,0 +1,2 @@
+# Preparation-only Parquet reader; runtime loading/scoring uses the standard library.
+pyarrow==25.0.1

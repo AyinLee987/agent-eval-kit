@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any, Callable, Dict, Protocol
 
 from .types import ConversationOutcome
+from .judge import validate_judge_result
 
 ConversationTask = Dict[str, Any]
 
@@ -36,11 +37,18 @@ class ConversationJudgeScorer:
 
     name = "conversation_judge"
 
-    def __init__(self, judge_fn: Callable[[ConversationTask, ConversationOutcome], Dict[str, Any]]) -> None:
+    def __init__(self, judge_fn: Callable[[ConversationTask, ConversationOutcome], Dict[str, Any]],
+                 dimensions=None) -> None:
         self.judge_fn = judge_fn
+        declared = dimensions if dimensions is not None else getattr(judge_fn, "metric_names", None)
+        self.dimensions = tuple(declared) if declared is not None else None
+        self.metric_names = tuple(f"judge_{key}" for key in self.dimensions or ())
 
     def score(self, task: ConversationTask, outcome: ConversationOutcome) -> Dict[str, Any]:
-        result = self.judge_fn(task, outcome)
+        result = validate_judge_result(self.judge_fn(task, outcome), self.dimensions)
+        if self.dimensions is None:
+            self.dimensions = tuple(key for key in result if key != "rationale")
+            self.metric_names = tuple(f"judge_{key}" for key in self.dimensions)
         scores = {f"judge_{key}": value for key, value in result.items() if key != "rationale"}
         scores["judge_rationale"] = result.get("rationale")
         return scores

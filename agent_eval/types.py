@@ -7,50 +7,90 @@ framework — translation is the adapter's job (see ``adapters/``).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Optional
 
 
 @dataclass(frozen=True)
 class ToolCall:
-    """One tool invocation recorded in a trajectory step."""
+    """One invocation and its own result, without flattening a tool batch."""
 
     name: str
-    arguments: Dict[str, Any] = field(default_factory=dict)
+    arguments: Any = field(default_factory=dict)
+    id: Optional[str] = None
+    observation: Optional[str] = None
+    status: Optional[str] = None
+    error: Optional[str] = None
+    ok: Optional[bool] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ToolCall":
+        return cls(
+            name=data.get("name", ""),
+            arguments=data["arguments"] if "arguments" in data else data.get("args", {}),
+            id=data.get("id", data.get("tool_call_id")),
+            observation=data.get("observation"),
+            status=data.get("status"),
+            error=data.get("error"),
+            ok=data.get("ok"),
+        )
+
+    def failed(self, marker: str = "ERROR") -> bool:
+        if self.error or self.status in {"failed", "error", "fatal", "fatal_tool_error", "cancelled", "timed_out"}:
+            return True
+        if self.ok is not None:
+            return not self.ok
+        return _error_observation(self.observation, marker)
+
+    def succeeded(self, marker: str = "ERROR") -> bool:
+        if self.failed(marker) or self.status in {"pending", "running", "submitted", "requested", "suspended"}:
+            return False
+        return self.ok is True or self.status in {"succeeded", "success", "completed", "finished"} or self.observation is not None
+
+
+def _error_observation(observation: Optional[str], marker: str) -> bool:
+    # Legacy flattened observations may put a later tool's error after a
+    # successful result. Structured per-call status takes precedence above.
+    return any(line.lstrip().startswith(marker) for line in (observation or "").splitlines())
 
 
 @dataclass(frozen=True)
 class TrajectoryStep:
-    """One think/act/observe step.
+    """A model step may contain several calls, or no call at all.
 
-    All fields are optional so partial or differently-shaped agent logs can
-    still be represented — a step with only a final ``thought`` and no
-    ``action`` is valid (e.g. the last step before a plain-text answer).
+    ``tool_calls=None`` means an older producer only supplied ``action``;
+    an explicit empty list means no invocation was recorded. In particular,
+    a suspended step's action placeholder must not become a completed call.
     """
 
     thought: Optional[str] = None
     action: Optional[ToolCall] = None
     observation: Optional[str] = None
+    tool_calls: Optional[List[ToolCall]] = None
+    error: Optional[str] = None
+
+    @property
+    def calls(self) -> List[ToolCall]:
+        if self.tool_calls is not None:
+            return list(self.tool_calls)
+        if self.action is None:
+            return []
+        return [replace(
+            self.action,
+            observation=self.action.observation if self.action.observation is not None else self.observation,
+            error=self.action.error if self.action.error is not None else self.error,
+        )]
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "TrajectoryStep":
-        """Build a step from the common ``{thought, action, observation}``
-
-        dict shape most agent loggers already produce, so most adapters can
-        do ``TrajectoryStep.from_dict(raw_step)`` and stop there.
-        """
-
         action = data.get("action")
-        tool_call = None
-        if action:
-            tool_call = ToolCall(
-                name=action.get("name", ""),
-                arguments=action.get("arguments") or action.get("args") or {},
-            )
         return cls(
             thought=data.get("thought"),
-            action=tool_call,
+            action=ToolCall.from_dict(action) if action else None,
             observation=data.get("observation"),
+            tool_calls=[ToolCall.from_dict(call) for call in (data.get("tool_calls") or [])]
+            if data.get("tool_calls") is not None else None,
+            error=data.get("error"),
         )
 
 
@@ -70,17 +110,20 @@ class AgentOutcome:
     tokens: int
     trajectory: List[TrajectoryStep] = field(default_factory=list)
     raw: Any = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def tool_calls(self) -> List[ToolCall]:
+        """All invocations in trajectory order, including later calls in a step."""
+        return [call for step in self.trajectory for call in step.calls]
 
     def used_tool(self, name: str) -> bool:
-        """Whether any trajectory step invoked the named tool."""
-
-        return any(step.action is not None and step.action.name == name for step in self.trajectory)
+        return any(call.name == name for call in self.tool_calls)
 
     def had_error(self, marker: str = "ERROR") -> bool:
-        """Whether any observation looks like a tool-level error."""
-
-        return any(
-            (step.observation or "").startswith(marker) for step in self.trajectory
+        return any(call.failed(marker) for call in self.tool_calls) or any(
+            bool(step.error) or (step.tool_calls is None and _error_observation(step.observation, marker))
+            for step in self.trajectory
         )
 
 

@@ -1,0 +1,5 @@
+[
+  {"id": "addition", "prompt": "calculate: 17 + 25", "expect_number": 42},
+  {"id": "product", "prompt": "calculate: 6 * 7", "expect_number": 42},
+  {"id": "difference", "prompt": "calculate: 100 - 58", "expect_number": 42}
+]

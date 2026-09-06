@@ -1,0 +1,12 @@
+{
+  "source": "controlled_synthetic_runtime_fixture",
+  "description": "Local regression inputs, not public benchmark data or model capability evidence.",
+  "cases": [
+    {"name": "normal", "steps": [2, 3], "delay_seconds": 0.005, "expected": 5},
+    {"name": "multi-call", "steps": [8, 9, 10], "delay_seconds": 0.005, "expected": 27},
+    {"name": "recoverable-error", "steps": [3, 4], "delay_seconds": 0.005, "recover_once": true, "expected": 7},
+    {"name": "slow-sla", "steps": [5], "delay_seconds": 0.03, "timeout_seconds": 0.01, "expected": 5},
+    {"name": "terminal-error", "steps": [], "delay_seconds": 0.001, "fatal": true, "expected": 0},
+    {"name": "incorrect-result", "steps": [2, 2], "delay_seconds": 0.001, "expected": 5}
+  ]
+}
